@@ -250,9 +250,12 @@ select.form-input { -webkit-appearance: none; background-image: url("data:image/
           <div class="header-sub">Cosméticos Artesanais</div>
         </div>
       </div>
-      <div class="header-notif" onclick="showNotifications()">
-        <div class="header-notif-icon">🔔</div>
-        <div class="notif-badge" id="notif-badge"></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <div id="sync-btn" onclick="forcSync()" style="width:32px;height:32px;background:rgba(201,168,76,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" title="Sincronizar agora">🔄</div>
+        <div class="header-notif" onclick="showNotifications()">
+          <div class="header-notif-icon">🔔</div>
+          <div class="notif-badge" id="notif-badge"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -796,8 +799,19 @@ async function syncFromCloud() {
 
 async function cloudWrite(method, path, data) {
   saveCache();
-  try { await apiFetch(method, path, data); }
-  catch { addToQueue(method, path, data); showOfflineBanner(true); }
+  try {
+    await apiFetch(method, path, data);
+    // Força sync imediato após gravar para atualizar outros celulares
+    setTimeout(async () => {
+      isSyncing = false;
+      await syncFromCloud();
+    }, 1000);
+  } catch(e) {
+    console.warn('cloudWrite falhou:', e.message);
+    addToQueue(method, path, data);
+    toast('⚠️ Sem conexão — dados salvos localmente', 3000);
+    showOfflineBanner(true);
+  }
 }
 
 function saveCache() { localStorage.setItem(CACHE_KEY, JSON.stringify(DB)); }
@@ -1553,6 +1567,16 @@ function imprimirRelatorio() {
   else window.print();
 }
 
+// ── FORÇAR SYNC MANUAL ────────────────────────────────────────────────────────
+async function forcSync() {
+  const btn = document.getElementById('sync-btn');
+  if (btn) btn.textContent = '⏳';
+  isSyncing = false;
+  await syncFromCloud();
+  if (btn) btn.textContent = '🔄';
+  toast('✅ Sincronizado!', 2000);
+}
+
 // ── ONLINE/OFFLINE ────────────────────────────────────────────────────────────
 window.addEventListener('online', async ()=>{
   isOnline=true;
@@ -1583,7 +1607,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await syncFromCloud();
 
   // Auto-sync a cada 30 segundos
-  setInterval(syncFromCloud, 30000);
+  setInterval(syncFromCloud, 10000); // Sync a cada 10 segundos
 
   // Prevenir double-tap zoom iOS
   document.addEventListener('touchend', e=>{
