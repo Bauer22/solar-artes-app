@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="description" content="Solar Artes — Cosméticos artesanais feitos com amor, ingredientes naturais e a energia do sol.">
+<title>Solar Artes — Cosméticos Artesanais</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,700;1,400;1,600&family=Jost:wght@300;400;500;600&family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --gold:#C9A84C;--gold-l:#E8C97A;--gold-p:#F7F0DC;--gold-d:#8B6914;
+  --rose:#C4756A;--rose-l:#EDD5D0;--rose-d:#8A3D35;
+  --cream:#FAF7F2;--cream-d:#F0EBE0;
+  --brown:#2C1A0E;--brown-m:#5C3D1E;--brown-l:#A07850;
+  --white:#FFFFFF;
+  --ff-d:'Playfair Display',serif;--ff-b:'Jost',sans-serif;--ff-a:'Cormorant Garamond',serif;
+  --r16:16px;--r24:24px;--r100:100px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:var(--ff-b);background:var(--cream);color:var(--brown);overflow-x:hidden;}
+img{max-width:100%;display:block;}
+a{text-decoration:none;color:inherit;}
+button{cursor:pointer;border:none;background:none;font-family:var(--ff-b);}
+
+/* HEADER */
+.hdr{position:fixed;top:0;left:0;right:0;z-index:100;background:rgba(250,247,242,.96);backdrop-filter:blur(12px);border-bottom:1px solid rgba(201,168,76,.18);padding:0 6%;}
+.hdr-in{max-width:1200px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:70px;}
+.logo{display:flex;align-items:center;gap:10px;font-family:var(--ff-d);font-size:21px;font-weight:500;color:var(--brown);}
+.logo-sun{font-size:26px;filter:drop-shadow(0 0 8px rgba(201,168,76,.6));}
+.logo-sub{font-family:var(--ff-b);font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--brown-l);margin-top:-2px;}
+.nav{display:flex;gap:28px;}
+.nav a{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brown-m);font-weight:500;transition:color .2s;}
+.nav a:hover{color:var(--gold-d);}
+.hdr-right{display:flex;align-items:center;gap:12px;}
+.cart-btn{display:flex;align-items:center;gap:7px;background:var(--brown);color:var(--gold-l);padding:9px 18px;border-radius:var(--r100);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:background .2s;}
+.cart-btn:hover{background:var(--brown-m);}
+.cart-n{background:var(--gold);color:var(--brown);width:18px;height:18px;border-radius:50%;font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+
+/* HERO */
+.hero{min-height:100vh;background:var(--brown);display:flex;align-items:center;position:relative;overflow:hidden;padding:120px 6% 80px;}
+.hero::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 25% 60%,rgba(201,168,76,.14) 0%,transparent 65%),radial-gradient(ellipse at 80% 20%,rgba(196,117,106,.1) 0%,transparent 55%);}
+.hero-bg{position:absolute;right:-3%;top:50%;transform:translateY(-50%);font-family:var(--ff-d);font-size:clamp(100px,16vw,260px);font-weight:700;color:rgba(201,168,76,.05);line-height:1;pointer-events:none;user-select:none;white-space:nowrap;}
+.hero-in{max-width:1200px;margin:0 auto;width:100%;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;position:relative;z-index:1;}
+.hero-tag{font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);margin-bottom:18px;display:flex;align-items:center;gap:10px;}
+.hero-tag::before{content:'';width:28px;height:1px;background:var(--gold);}
+.hero h1{font-family:var(--ff-d);font-size:clamp(40px,5vw,68px);font-weight:400;color:var(--white);line-height:1.1;margin-bottom:22px;}
+.hero h1 em{color:var(--gold-l);font-style:italic;}
+.hero-p{font-size:15px;line-height:1.8;color:rgba(255,255,255,.58);margin-bottom:38px;max-width:420px;}
+.hero-btns{display:flex;gap:12px;flex-wrap:wrap;}
+.btn-g{background:linear-gradient(135deg,var(--gold),var(--gold-l));color:var(--brown);padding:14px 30px;border-radius:var(--r100);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(201,168,76,.32);display:inline-flex;align-items:center;gap:7px;}
+.btn-g:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(201,168,76,.44);}
+.btn-o{border:1.5px solid rgba(255,255,255,.28);color:var(--white);padding:14px 30px;border-radius:var(--r100);font-size:12px;letter-spacing:.12em;text-transform:uppercase;font-weight:500;transition:all .2s;display:inline-flex;align-items:center;gap:7px;}
+.btn-o:hover{border-color:var(--gold);color:var(--gold-l);}
+.hero-stats{display:flex;gap:36px;margin-top:44px;}
+.stat-n{font-family:var(--ff-d);font-size:30px;color:var(--gold-l);}
+.stat-l{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:rgba(255,255,255,.38);margin-top:2px;}
+.hero-card{background:linear-gradient(145deg,rgba(201,168,76,.12),rgba(196,117,106,.08));border:1px solid rgba(201,168,76,.22);border-radius:var(--r24);padding:44px 36px;text-align:center;backdrop-filter:blur(8px);}
+.hero-card-emoji{font-size:100px;display:block;margin-bottom:18px;}
+.hero-card-name{font-family:var(--ff-d);font-size:20px;color:var(--gold-l);margin-bottom:8px;}
+.hero-card-price{font-size:32px;font-weight:300;color:var(--white);margin-bottom:18px;}
+.hero-badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.bdg{padding:5px 12px;border-radius:var(--r100);font-size:10px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;}
+.bdg-g{background:rgba(201,168,76,.2);color:var(--gold-l);border:1px solid rgba(201,168,76,.3);}
+.bdg-r{background:rgba(196,117,106,.2);color:#EDD5D0;border:1px solid rgba(196,117,106,.3);}
+
+/* MARQUEE */
+.mq{background:var(--gold);padding:13px 0;overflow:hidden;}
+.mq-track{display:flex;animation:mq 22s linear infinite;white-space:nowrap;}
+.mq-item{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--brown);font-weight:600;padding:0 28px;display:flex;align-items:center;gap:10px;flex-shrink:0;}
+.mq-dot{width:4px;height:4px;border-radius:50%;background:var(--brown);opacity:.35;}
+@keyframes mq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+
+/* SECTION */
+.sec{padding:80px 6%;}
+.sec-in{max-width:1200px;margin:0 auto;}
+.sec-hd{text-align:center;margin-bottom:52px;}
+.sec-tag{font-size:10px;letter-spacing:.22em;text-transform:uppercase;color:var(--gold-d);margin-bottom:12px;display:block;}
+.sec-title{font-family:var(--ff-d);font-size:clamp(30px,4vw,50px);font-weight:400;color:var(--brown);line-height:1.2;}
+.sec-title em{color:var(--rose);font-style:italic;}
+.sec-desc{font-size:15px;color:var(--brown-l);line-height:1.7;max-width:460px;margin:14px auto 0;}
+
+/* GRID PRODUTOS */
+.prod-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(255px,1fr));gap:22px;}
+.prod-card{background:var(--white);border-radius:20px;overflow:hidden;transition:transform .25s,box-shadow .25s;box-shadow:0 2px 14px rgba(44,26,14,.07);cursor:pointer;}
+.prod-card:hover{transform:translateY(-5px);box-shadow:0 12px 36px rgba(44,26,14,.13);}
+.prod-img{height:210px;background:linear-gradient(145deg,var(--gold-p),var(--rose-l));display:flex;align-items:center;justify-content:center;font-size:72px;position:relative;}
+.prod-tag-pill{position:absolute;top:12px;left:12px;background:var(--brown);color:var(--gold-l);font-size:9px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:4px 10px;border-radius:var(--r100);}
+.prod-body{padding:18px;}
+.prod-name{font-family:var(--ff-d);font-size:17px;color:var(--brown);margin-bottom:6px;line-height:1.3;}
+.prod-desc{font-size:12px;color:var(--brown-l);line-height:1.6;margin-bottom:14px;min-height:38px;}
+.prod-foot{display:flex;align-items:center;justify-content:space-between;}
+.prod-price{font-family:var(--ff-d);font-size:22px;color:var(--brown);}
+.prod-price small{font-size:11px;color:var(--brown-l);font-family:var(--ff-b);}
+.add-btn{background:var(--brown);color:var(--gold-l);width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;transition:background .2s,transform .15s;}
+.add-btn:hover{background:var(--gold-d);transform:scale(1.1);}
+
+/* DESTAQUE */
+.feat{background:var(--brown);padding:80px 6%;position:relative;overflow:hidden;}
+.feat::after{content:'☀';position:absolute;right:4%;top:50%;transform:translateY(-50%);font-size:220px;opacity:.04;line-height:1;pointer-events:none;}
+.feat-in{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+.feat-card{background:rgba(201,168,76,.1);border:1px solid rgba(201,168,76,.22);border-radius:20px;padding:48px 36px;text-align:center;}
+.feat-emoji{font-size:96px;display:block;margin-bottom:14px;}
+.feat-card-name{font-family:var(--ff-d);font-size:22px;color:var(--gold-l);margin-bottom:6px;}
+.feat-card-price{font-size:34px;color:var(--white);font-weight:300;margin-bottom:20px;}
+.feat-tag2{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-bottom:14px;display:block;}
+.feat h2{font-family:var(--ff-d);font-size:clamp(32px,4vw,52px);color:var(--white);font-weight:400;line-height:1.2;margin-bottom:18px;}
+.feat h2 em{color:var(--gold-l);font-style:italic;}
+.feat-p{font-size:15px;color:rgba(255,255,255,.58);line-height:1.8;margin-bottom:32px;}
+.feat-list{list-style:none;margin-bottom:36px;display:flex;flex-direction:column;gap:10px;}
+.feat-list li{display:flex;align-items:center;gap:10px;font-size:13px;color:rgba(255,255,255,.68);}
+.feat-list li::before{content:'✦';color:var(--gold);font-size:10px;flex-shrink:0;}
+
+/* WHATSAPP */
+.wpp-sec{background:var(--cream-d);padding:64px 6%;}
+.wpp-in{max-width:680px;margin:0 auto;text-align:center;}
+.wpp-icon{font-size:54px;margin-bottom:18px;display:block;}
+.wpp-title{font-family:var(--ff-d);font-size:38px;color:var(--brown);margin-bottom:14px;}
+.wpp-desc{font-size:15px;color:var(--brown-l);line-height:1.7;margin-bottom:30px;}
+.wpp-btn{display:inline-flex;align-items:center;gap:10px;background:#25D366;color:white;padding:16px 36px;border-radius:var(--r100);font-size:14px;font-weight:700;letter-spacing:.06em;transition:transform .2s,box-shadow .2s;box-shadow:0 4px 20px rgba(37,211,102,.28);}
+.wpp-btn:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(37,211,102,.4);}
+.wpp-steps{display:flex;gap:20px;margin-top:40px;justify-content:center;flex-wrap:wrap;}
+.wpp-step{flex:1;min-width:140px;max-width:180px;}
+.step-n{font-family:var(--ff-d);font-size:40px;color:var(--gold);opacity:.4;line-height:1;}
+.step-t{font-size:12px;color:var(--brown-m);line-height:1.5;margin-top:4px;}
+
+/* PAGAMENTO */
+.pay-sec{padding:64px 6%;}
+.pay-in{max-width:860px;margin:0 auto;}
+.pay-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:14px;}
+.pay-card{background:var(--white);border-radius:var(--r16);padding:26px 18px;text-align:center;box-shadow:0 2px 12px rgba(44,26,14,.06);border:1.5px solid transparent;transition:border-color .2s,transform .2s;}
+.pay-card:hover{border-color:var(--gold);transform:translateY(-3px);}
+.pay-icon{font-size:34px;margin-bottom:10px;display:block;}
+.pay-name{font-family:var(--ff-d);font-size:16px;color:var(--brown);margin-bottom:4px;}
+.pay-desc{font-size:11px;color:var(--brown-l);}
+.pix-box{margin-top:36px;background:var(--gold-p);border-radius:var(--r16);padding:24px;text-align:center;border:1.5px solid var(--gold);}
+.pix-lbl{font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-d);margin-bottom:8px;}
+.pix-val{font-family:var(--ff-d);font-size:22px;color:var(--brown);margin-bottom:14px;}
+.copy-btn{background:var(--brown);color:var(--gold-l);padding:10px 24px;border-radius:var(--r100);font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;transition:background .2s;}
+.copy-btn:hover{background:var(--brown-m);}
+
+/* SOBRE */
+.about{background:var(--cream-d);padding:80px 6%;}
+.about-in{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:80px;align-items:center;}
+.about-visual{background:linear-gradient(145deg,var(--gold-p),var(--rose-l));border-radius:var(--r24);padding:56px 36px;text-align:center;}
+.about-emoji{font-size:80px;display:block;margin-bottom:18px;}
+.about-quote{font-family:var(--ff-a);font-size:22px;color:var(--brown);font-style:italic;line-height:1.55;}
+.about h2{font-family:var(--ff-d);font-size:clamp(32px,3.5vw,46px);margin-bottom:18px;line-height:1.2;}
+.about h2 em{color:var(--rose);font-style:italic;}
+.about-p{font-size:15px;color:var(--brown-m);line-height:1.8;margin-bottom:14px;}
+.about-feats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:26px;}
+.af{background:var(--white);border-radius:14px;padding:16px;display:flex;gap:10px;align-items:flex-start;}
+.af-icon{font-size:22px;flex-shrink:0;}
+.af-name{font-weight:600;color:var(--brown);font-size:12px;margin-bottom:2px;}
+.af-desc{font-size:11px;color:var(--brown-m);line-height:1.5;}
+
+/* FOOTER */
+.ftr{background:var(--brown);color:rgba(255,255,255,.55);padding:60px 6% 36px;}
+.ftr-in{max-width:1200px;margin:0 auto;}
+.ftr-top{display:grid;grid-template-columns:2fr 1fr 1fr;gap:56px;margin-bottom:44px;}
+.ftr-logo{font-family:var(--ff-d);font-size:26px;color:var(--gold-l);margin-bottom:14px;}
+.ftr-desc{font-size:13px;line-height:1.7;max-width:240px;}
+.ftr-col h4{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);margin-bottom:16px;font-weight:600;}
+.ftr-col ul{list-style:none;display:flex;flex-direction:column;gap:9px;}
+.ftr-col ul li a{font-size:13px;color:rgba(255,255,255,.45);transition:color .2s;}
+.ftr-col ul li a:hover{color:var(--gold-l);}
+.ftr-bot{border-top:1px solid rgba(255,255,255,.1);padding-top:22px;display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;}
+.ftr-copy{font-size:12px;}
+.ftr-pay{display:flex;gap:7px;}
+.fpay{background:rgba(255,255,255,.1);border-radius:6px;padding:4px 10px;font-size:11px;color:rgba(255,255,255,.55);}
+
+/* CARRINHO DRAWER */
+.drawer-bg{position:fixed;inset:0;background:rgba(44,26,14,.5);z-index:200;display:none;backdrop-filter:blur(4px);}
+.drawer-bg.open{display:block;}
+.drawer{position:fixed;right:0;top:0;bottom:0;width:420px;max-width:100vw;background:var(--cream);z-index:201;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;box-shadow:-6px 0 36px rgba(44,26,14,.16);}
+.drawer.open{transform:translateX(0);}
+.drawer-hd{padding:22px;border-bottom:1px solid var(--cream-d);display:flex;justify-content:space-between;align-items:center;}
+.drawer-hd h3{font-family:var(--ff-d);font-size:22px;}
+.drawer-close{width:34px;height:34px;background:var(--cream-d);border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:15px;transition:background .2s;}
+.drawer-close:hover{background:var(--rose-l);}
+.drawer-items{flex:1;overflow-y:auto;padding:14px 22px;}
+.ci{display:flex;gap:12px;padding:14px 0;border-bottom:1px solid var(--cream-d);}
+.ci-img{width:60px;height:60px;background:var(--gold-p);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:26px;flex-shrink:0;}
+.ci-info{flex:1;}
+.ci-name{font-family:var(--ff-d);font-size:14px;color:var(--brown);margin-bottom:3px;}
+.ci-price{font-size:12px;color:var(--brown-l);}
+.ci-qty{display:flex;align-items:center;gap:9px;margin-top:7px;}
+.qbtn{width:26px;height:26px;border-radius:50%;background:var(--cream-d);font-size:14px;display:flex;align-items:center;justify-content:center;transition:background .15s;}
+.qbtn:hover{background:var(--gold-p);}
+.qnum{font-size:13px;font-weight:600;min-width:18px;text-align:center;}
+.drawer-ft{padding:18px 22px;border-top:1px solid var(--cream-d);}
+.cart-tot{display:flex;justify-content:space-between;margin-bottom:14px;}
+.cart-tot-lbl{font-size:13px;color:var(--brown-l);}
+.cart-tot-val{font-family:var(--ff-d);font-size:26px;}
+.wbtn{width:100%;padding:15px;border-radius:var(--r16);background:#25D366;color:white;font-size:14px;font-weight:700;letter-spacing:.06em;display:flex;align-items:center;justify-content:center;gap:9px;transition:background .2s;margin-bottom:8px;}
+.wbtn:hover{background:#1da852;}
+.cart-empty{text-align:center;padding:56px 22px;color:var(--brown-l);}
+.cart-empty-i{font-size:46px;margin-bottom:12px;display:block;}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--brown);color:var(--gold-l);padding:12px 24px;border-radius:var(--r100);font-size:13px;font-weight:500;z-index:300;opacity:0;transition:all .3s;pointer-events:none;white-space:nowrap;box-shadow:0 8px 28px rgba(44,26,14,.28);}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* LOADER */
+.loader{text-align:center;padding:60px;color:var(--brown-l);}
+.loader-spin{width:36px;height:36px;border:3px solid var(--cream-d);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;margin:0 auto 12px;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* RESPONSIVE */
+@media(max-width:900px){
+  .nav{display:none;}
+  .hero-in{grid-template-columns:1fr;}
+  .hero-card{display:none;}
+  .feat-in{grid-template-columns:1fr;}
+  .about-in{grid-template-columns:1fr;}
+  .ftr-top{grid-template-columns:1fr;}
+}
+@media(max-width:600px){
+  .sec{padding:56px 5%;}
+  .prod-grid{grid-template-columns:repeat(2,1fr);gap:12px;}
+  .about-feats{grid-template-columns:1fr;}
+  .pay-grid{grid-template-columns:repeat(2,1fr);}
+  .drawer{width:100vw;}
+  .hero-btns{flex-direction:column;}
+  .wpp-steps{flex-direction:column;align-items:center;}
+  .hero-stats{flex-wrap:wrap;gap:20px;}
+}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-in">
+    <a href="#" class="logo">
+      <span class="logo-sun">☀</span>
+      <div><div>Solar Artes</div><div class="logo-sub">Cosméticos Artesanais</div></div>
+    </a>
+    <nav class="nav">
+      <a href="#produtos">Produtos</a>
+      <a href="#sobre">Nossa história</a>
+      <a href="#pagamento">Pagamento</a>
+      <a href="#contato">Contato</a>
+    </nav>
+    <div class="hdr-right">
+      <button class="cart-btn" onclick="openCart()">
+        🛍️ Carrinho <span class="cart-n" id="cart-n">0</span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-bg">SOLAR</div>
+  <div class="hero-in">
+    <div>
+      <div class="hero-tag">Cosméticos Artesanais</div>
+      <h1>Beleza que nasce <em>da natureza</em></h1>
+      <p class="hero-p">Cosméticos artesanais feitos com amor, ingredientes naturais e a energia do sol. Cada produto conta uma história de cuidado e brasilidade.</p>
+      <div class="hero-btns">
+        <a href="#produtos" class="btn-g">Ver produtos ✦</a>
+        <button onclick="pedirWpp()" class="btn-o">💬 Pedir pelo WhatsApp</button>
+      </div>
+      <div class="hero-stats">
+        <div><div class="stat-n">100%</div><div class="stat-l">Artesanal</div></div>
+        <div><div class="stat-n">Natural</div><div class="stat-l">Ingredientes</div></div>
+        <div><div class="stat-n">☀</div><div class="stat-l">Com amor</div></div>
+      </div>
+    </div>
+    <div class="hero-card">
+      <span class="hero-card-emoji">🌸</span>
+      <div class="hero-card-name">Body Aurora 200ml</div>
+      <div class="hero-card-price">R$ 45,00</div>
+      <div class="hero-badges">
+        <span class="bdg bdg-g">✦ Artesanal</span>
+        <span class="bdg bdg-r">🌿 Natural</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="mq">
+  <div class="mq-track">
+    <span class="mq-item">☀ Solar Artes<span class="mq-dot"></span></span>
+    <span class="mq-item">🌿 100% Natural<span class="mq-dot"></span></span>
+    <span class="mq-item">✦ Artesanal<span class="mq-dot"></span></span>
+    <span class="mq-item">💛 Feito com Amor<span class="mq-dot"></span></span>
+    <span class="mq-item">🌸 Ingredientes Selecionados<span class="mq-dot"></span></span>
+    <span class="mq-item">☀ Solar Artes<span class="mq-dot"></span></span>
+    <span class="mq-item">🌿 100% Natural<span class="mq-dot"></span></span>
+    <span class="mq-item">✦ Artesanal<span class="mq-dot"></span></span>
+    <span class="mq-item">💛 Feito com Amor<span class="mq-dot"></span></span>
+    <span class="mq-item">🌸 Ingredientes Selecionados<span class="mq-dot"></span></span>
+    <span class="mq-item">☀ Solar Artes<span class="mq-dot"></span></span>
+    <span class="mq-item">🌿 100% Natural<span class="mq-dot"></span></span>
+    <span class="mq-item">✦ Artesanal<span class="mq-dot"></span></span>
+    <span class="mq-item">💛 Feito com Amor<span class="mq-dot"></span></span>
+    <span class="mq-item">🌸 Ingredientes Selecionados<span class="mq-dot"></span></span>
+  </div>
+</div>
+
+<section class="sec" id="produtos">
+  <div class="sec-in">
+    <div class="sec-hd">
+      <span class="sec-tag">Nossa coleção</span>
+      <h2 class="sec-title">Produtos <em>artesanais</em></h2>
+      <p class="sec-desc">Cada produto é preparado com ingredientes naturais selecionados e muito cuidado.</p>
+    </div>
+    <div id="prod-grid" class="prod-grid">
+      <div class="loader"><div class="loader-spin"></div>Carregando produtos...</div>
+    </div>
+  </div>
+</section>
+
+<section class="feat">
+  <div class="feat-in">
+    <div class="feat-card">
+      <span class="feat-emoji">🌙</span>
+      <div class="feat-card-name">Body Moon Mist 200ml</div>
+      <div class="feat-card-price">R$ 65,00</div>
+      <button class="btn-g" onclick="addCart({id:'moon-mist',nome:'Body Moon Mist 200ml',preco:65,emoji:'🌙'})">Adicionar ao carrinho</button>
+    </div>
+    <div>
+      <span class="feat-tag2">✦ Destaque da semana</span>
+      <h2>O segredo de uma <em>pele radiante</em></h2>
+      <p class="feat-p">Nossa névoa corporal artesanal que hidrata, perfuma e deixa a pele com brilho natural. Fórmula exclusiva com ingredientes da natureza brasileira.</p>
+      <ul class="feat-list">
+        <li>Hidratação de longa duração</li>
+        <li>Perfume suave e natural que dura o dia todo</li>
+        <li>Ingredientes 100% naturais e veganos</li>
+        <li>Feito artesanalmente em pequenos lotes</li>
+        <li>Embalagem sustentável e reciclável</li>
+      </ul>
+      <button onclick="pedirWpp()" class="btn-g">Pedir via WhatsApp 💬</button>
+    </div>
+  </div>
+</section>
+
+<section class="wpp-sec" id="whatsapp">
+  <div class="wpp-in">
+    <span class="wpp-icon">💬</span>
+    <h2 class="wpp-title">Peça pelo WhatsApp</h2>
+    <p class="wpp-desc">Monte seu pedido no carrinho e envie direto para o nosso WhatsApp. Confirmamos disponibilidade e combinamos entrega ou retirada.</p>
+    <button onclick="pedirWpp()" class="wpp-btn">📱 Abrir WhatsApp</button>
+    <div class="wpp-steps">
+      <div class="wpp-step"><div class="step-n">01</div><div class="step-t">Escolha os produtos e adicione ao carrinho</div></div>
+      <div class="wpp-step"><div class="step-n">02</div><div class="step-t">Clique em "Pedir pelo WhatsApp"</div></div>
+      <div class="wpp-step"><div class="step-n">03</div><div class="step-t">Confirme o pedido e combine a entrega</div></div>
+    </div>
+  </div>
+</section>
+
+<section class="pay-sec" id="pagamento">
+  <div class="pay-in">
+    <div class="sec-hd">
+      <span class="sec-tag">Pagamento</span>
+      <h2 class="sec-title">Formas de <em>pagamento</em></h2>
+    </div>
+    <div class="pay-grid">
+      <div class="pay-card"><span class="pay-icon">💠</span><div class="pay-name">Pix</div><div class="pay-desc">Instantâneo, sem taxas</div></div>
+      <div class="pay-card"><span class="pay-icon">💵</span><div class="pay-name">Dinheiro</div><div class="pay-desc">Na entrega ou retirada</div></div>
+      <div class="pay-card"><span class="pay-icon">💳</span><div class="pay-name">Cartão</div><div class="pay-desc">Crédito e débito</div></div>
+      <div class="pay-card"><span class="pay-icon">📆</span><div class="pay-name">A prazo</div><div class="pay-desc">Combinado pelo WhatsApp</div></div>
+    </div>
+    <div class="pix-box">
+      <div class="pix-lbl">Chave Pix</div>
+      <div class="pix-val" id="pix-val">CONFIGURE_SUA_CHAVE_PIX</div>
+      <button class="copy-btn" onclick="copyPix()">📋 Copiar chave Pix</button>
+    </div>
+  </div>
+</section>
+
+<section class="about" id="sobre">
+  <div class="about-in">
+    <div class="about-visual">
+      <span class="about-emoji">☀</span>
+      <p class="about-quote">"Cada produto é feito com a energia do sol e o cuidado das mãos que criam."</p>
+    </div>
+    <div>
+      <span class="sec-tag">Nossa história</span>
+      <h2 class="about h2">Cosméticos feitos <em>com alma</em></h2>
+      <p class="about-p">A Solar Artes nasceu do amor pela natureza e pela beleza artesanal. Cada produto é criado em pequenos lotes, com ingredientes naturais cuidadosamente selecionados.</p>
+      <p class="about-p">Nossa missão é levar beleza consciente para o dia a dia, respeitando o meio ambiente e valorizando o trabalho artesanal brasileiro.</p>
+      <div class="about-feats">
+        <div class="af"><span class="af-icon">🌿</span><div><div class="af-name">100% Natural</div><div class="af-desc">Ingredientes selecionados da natureza</div></div></div>
+        <div class="af"><span class="af-icon">✋</span><div><div class="af-name">Artesanal</div><div class="af-desc">Feito em pequenos lotes com cuidado</div></div></div>
+        <div class="af"><span class="af-icon">🌱</span><div><div class="af-name">Sustentável</div><div class="af-desc">Embalagens recicláveis</div></div></div>
+        <div class="af"><span class="af-icon">💛</span><div><div class="af-name">Com Amor</div><div class="af-desc">Dedicação em cada produto</div></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="ftr" id="contato">
+  <div class="ftr-in">
+    <div class="ftr-top">
+      <div>
+        <div class="ftr-logo">☀ Solar Artes</div>
+        <p class="ftr-desc">Cosméticos artesanais feitos com amor, ingredientes naturais e a energia do sol.</p>
+        <div style="margin-top:18px;display:flex;gap:14px">
+          <a href="https://instagram.com" style="font-size:22px">📸</a>
+          <a href="#whatsapp" style="font-size:22px">💬</a>
+        </div>
+      </div>
+      <div class="ftr-col">
+        <h4>Produtos</h4>
+        <ul>
+          <li><a href="#produtos">Body Aurora</a></li>
+          <li><a href="#produtos">Body Moon Mist</a></li>
+          <li><a href="#produtos">Body Fly</a></li>
+          <li><a href="#produtos">Body Liria</a></li>
+          <li><a href="#produtos">Body Sky</a></li>
+          <li><a href="#produtos">Body 002</a></li>
+        </ul>
+      </div>
+      <div class="ftr-col">
+        <h4>Contato</h4>
+        <ul>
+          <li><a href="#whatsapp">WhatsApp</a></li>
+          <li><a href="#pagamento">Pagamento</a></li>
+          <li><a href="#sobre">Nossa história</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="ftr-bot">
+      <div class="ftr-copy">© 2026 Solar Artes Cosméticos Artesanais.</div>
+      <div class="ftr-pay">
+        <span class="fpay">Pix</span><span class="fpay">Débito</span><span class="fpay">Crédito</span><span class="fpay">Dinheiro</span>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- CARRINHO DRAWER -->
+<div class="drawer-bg" id="drawer-bg" onclick="closeCart()"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-hd">
+    <h3>🛍️ Carrinho</h3>
+    <button class="drawer-close" onclick="closeCart()">✕</button>
+  </div>
+  <div class="drawer-items" id="drawer-items"></div>
+  <div class="drawer-ft">
+    <div class="cart-tot"><span class="cart-tot-lbl">Total</span><span class="cart-tot-val" id="cart-tot">R$ 0,00</span></div>
+    <button class="wbtn" onclick="pedirWpp()">💬 Pedir pelo WhatsApp</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────────────────────────
+// CONFIGURAÇÃO — substitua com seus dados reais
+// ──────────────────────────────────────────────────────────────
+const CFG = {
+  supabaseUrl: 'COLE_URL_SUPABASE_AQUI',
+  supabaseKey: 'COLE_CHAVE_ANON_SUPABASE_AQUI',
+  whatsapp:    'COLE_SEU_NUMERO_WHATSAPP',   // ex: 5554999887766
+  pixChave:    'COLE_SUA_CHAVE_PIX',         // ex: solar@email.com
+};
+
+// Seta chave pix na tela
+document.getElementById('pix-val').textContent = CFG.pixChave;
+
+// ── TOAST ─────────────────────────────────────────────────────
+function toast(msg, dur=2600) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+
+// ── FORMATAÇÃO ────────────────────────────────────────────────
+function fmt(v) { return 'R$ ' + Number(v).toFixed(2).replace('.', ','); }
+
+// ── CARRINHO ──────────────────────────────────────────────────
+let cart = JSON.parse(localStorage.getItem('solar_cart_v2') || '[]');
+
+function saveCart() { localStorage.setItem('solar_cart_v2', JSON.stringify(cart)); }
+
+function addCart(prod) {
+  const ex = cart.find(i => i.id === prod.id);
+  if (ex) ex.qty++;
+  else cart.push({ ...prod, qty: 1 });
+  saveCart();
+  renderCart();
+  toast('✅ ' + prod.nome + ' adicionado!');
+  openCart();
+}
+
+function rmCart(id) {
+  cart = cart.filter(i => i.id !== id);
+  saveCart(); renderCart();
+}
+
+function chgQty(id, d) {
+  const it = cart.find(i => i.id === id);
+  if (!it) return;
+  it.qty += d;
+  if (it.qty <= 0) rmCart(id);
+  else { saveCart(); renderCart(); }
+}
+
+function renderCart() {
+  const total = cart.reduce((a, i) => a + i.preco * i.qty, 0);
+  const count = cart.reduce((a, i) => a + i.qty, 0);
+  document.getElementById('cart-n').textContent = count;
+  document.getElementById('cart-tot').textContent = fmt(total);
+  const el = document.getElementById('drawer-items');
+  if (!cart.length) {
+    el.innerHTML = '<div class="cart-empty"><span class="cart-empty-i">🛒</span>Carrinho vazio</div>';
+    return;
+  }
+  el.innerHTML = cart.map(i => `
+    <div class="ci">
+      <div class="ci-img">${i.emoji||'🌿'}</div>
+      <div class="ci-info">
+        <div class="ci-name">${i.nome}</div>
+        <div class="ci-price">${fmt(i.preco)}</div>
+        <div class="ci-qty">
+          <button class="qbtn" onclick="chgQty('${i.id}',-1)">−</button>
+          <span class="qnum">${i.qty}</span>
+          <button class="qbtn" onclick="chgQty('${i.id}',1)">+</button>
+        </div>
+      </div>
+      <button onclick="rmCart('${i.id}')" style="border:none;background:none;cursor:pointer;color:var(--brown-l);font-size:17px;align-self:flex-start">✕</button>
+    </div>`).join('');
+}
+
+function openCart()  { document.getElementById('drawer-bg').classList.add('open'); document.getElementById('drawer').classList.add('open'); }
+function closeCart() { document.getElementById('drawer-bg').classList.remove('open'); document.getElementById('drawer').classList.remove('open'); }
+
+// ── WHATSAPP ──────────────────────────────────────────────────
+function pedirWpp() {
+  if (!cart.length) { toast('Adicione produtos ao carrinho primeiro!'); return; }
+  const total = cart.reduce((a, i) => a + i.preco * i.qty, 0);
+  const itens = cart.map(i => `• ${i.qty}x ${i.nome} — ${fmt(i.preco * i.qty)}`).join('\n');
+  const msg = `☀ *Pedido Solar Artes*\n\n${itens}\n\n*Total: ${fmt(total)}*\n\nOlá! Gostaria de confirmar meu pedido 🌸`;
+  const num = CFG.whatsapp.replace(/\D/g,'');
+  window.open(`https://wa.me/${num}?text=${encodeURIComponent(msg)}`, '_blank');
+}
+
+// ── PIX ───────────────────────────────────────────────────────
+function copyPix() {
+  navigator.clipboard.writeText(CFG.pixChave)
+    .then(() => toast('✅ Chave Pix copiada!'))
+    .catch(() => toast('Chave: ' + CFG.pixChave, 4000));
+}
+
+// ── PRODUTOS ──────────────────────────────────────────────────
+const FALLBACK = [
+  { id:'aurora',    nome:'Body Aurora 200ml',    preco:45, descricao:'Hidratante artesanal com essência floral e ingredientes naturais.', emoji:'🌸', tag:'Mais vendido' },
+  { id:'moon-mist', nome:'Body Moon Mist 200ml', preco:65, descricao:'Névoa corporal exclusiva que hidrata e ilumina a pele naturalmente.', emoji:'🌙', tag:'Novidade' },
+  { id:'fly',       nome:'Body Fly',              preco:60, descricao:'Creme leve que absorve rapidamente, deixando a pele sedosa.', emoji:'🦋', tag:null },
+  { id:'liria',     nome:'Body Liria',            preco:60, descricao:'Hidratante floral com extrato de lírio para pele macia.', emoji:'🌷', tag:null },
+  { id:'sky',       nome:'Body Sky',              preco:65, descricao:'Creme corporal inspirado na leveza do céu, hidratação duradoura.', emoji:'☁️', tag:'Premium' },
+  { id:'002',       nome:'Body 002',              preco:65, descricao:'Fórmula exclusiva 002 com blend de óleos essenciais premium.', emoji:'✨', tag:'Exclusivo' },
+];
+
+function renderProds(prods) {
+  document.getElementById('prod-grid').innerHTML = prods.map(p => `
+    <div class="prod-card" onclick="addCart({id:'${p.id}',nome:'${p.nome.replace(/'/g,"\\'")}',preco:${Number(p.preco||p.venda)},emoji:'${p.emoji||'🌿'}'})">
+      <div class="prod-img">
+        ${p.tag ? `<div class="prod-tag-pill">${p.tag}</div>` : ''}
+        <span>${p.emoji||'🌿'}</span>
+      </div>
+      <div class="prod-body">
+        <div class="prod-name">${p.nome}</div>
+        <div class="prod-desc">${p.descricao||''}</div>
+        <div class="prod-foot">
+          <div class="prod-price">${fmt(p.preco||p.venda)}<small> / unid.</small></div>
+          <button class="add-btn" onclick="event.stopPropagation();addCart({id:'${p.id}',nome:'${p.nome.replace(/'/g,"\\'")}',preco:${Number(p.preco||p.venda)},emoji:'${p.emoji||'🌿'}'})" aria-label="Adicionar">+</button>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+async function loadProds() {
+  if (CFG.supabaseUrl === 'COLE_URL_SUPABASE_AQUI') {
+    renderProds(FALLBACK); return;
+  }
+  try {
+    const r = await fetch(`${CFG.supabaseUrl}/rest/v1/produtos?select=*&ativo=eq.true&order=nome`, {
+      headers: { apikey: CFG.supabaseKey, Authorization: `Bearer ${CFG.supabaseKey}` }
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    renderProds(data.length ? data : FALLBACK);
+  } catch(e) {
+    console.warn('Supabase indisponível, usando fallback');
+    renderProds(FALLBACK);
+  }
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+renderCart();
+loadProds();
+</script>
+</body>
+</html>
