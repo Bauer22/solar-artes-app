@@ -279,7 +279,8 @@ textarea.pn-in{resize:vertical;min-height:70px}
 
 <script>
 // ══════════ CONFIG ══════════
-const API_URL = 'https://solar-artes-api-production.up.railway.app';
+// Se o site estiver rodando no próprio Railway, usa o mesmo endereço; senão usa a URL completa
+const API_URL = location.hostname.includes('railway.app') ? '' : 'https://solar-artes-api-production.up.railway.app';
 let SITE = { whatsapp:'5554997081587', pix:'54997081587', hero_titulo:'', hero_sub:'', sobre:'' };
 let PRODUTOS = [];
 let AUTH = null;
