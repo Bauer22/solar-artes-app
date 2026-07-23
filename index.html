@@ -457,13 +457,56 @@ function formProduto(id){
     <span class="pn-lbl">Custo (R$)</span><input class="pn-in" id="fp-custo" type="number" step="0.01" value="${p.custo||''}">
     <span class="pn-lbl">Estoque</span><input class="pn-in" id="fp-estoque" type="number" value="${p.estoque??10}">
     <span class="pn-lbl">Descrição (aparece na loja)</span><textarea class="pn-in" id="fp-desc">${esc(p.descricao||'')}</textarea>
-    <span class="pn-lbl">Foto (link da imagem — opcional)</span><input class="pn-in" id="fp-foto" placeholder="https://..." value="${esc(p.foto||'')}">
+    <span class="pn-lbl">Foto do produto</span>
+    <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+      <div id="fp-foto-prev" style="width:64px;height:64px;border-radius:12px;background:var(--cream-d);display:flex;align-items:center;justify-content:center;font-size:24px;overflow:hidden;flex-shrink:0">${p.foto?`<img src="${esc(p.foto)}" style="width:100%;height:100%;object-fit:cover">`:'📷'}</div>
+      <label style="flex:1;padding:13px;border-radius:12px;background:var(--brown);color:var(--gold-l);font-size:12px;font-weight:700;text-align:center;cursor:pointer;letter-spacing:.05em">
+        📷 ENVIAR FOTO DO CELULAR
+        <input type="file" id="fp-file" accept="image/*" style="display:none" onchange="uploadFoto(this)">
+      </label>
+    </div>
+    <div id="fp-upload-status" style="font-size:12px;color:var(--brown-l);margin-bottom:6px;min-height:14px"></div>
+    <input class="pn-in" id="fp-foto" placeholder="ou cole um link https://..." value="${esc(p.foto||'')}">
     <span class="pn-lbl">Emoji (se não tiver foto)</span><input class="pn-in" id="fp-emoji" maxlength="4" value="${p.emoji||'🌿'}">
     <span class="pn-lbl">Etiqueta (ex: Novidade — opcional)</span><input class="pn-in" id="fp-tag" value="${esc(p.tag||'')}">
     <button class="pn-save" onclick="salvarProduto('${id||''}')">💾 Salvar</button>
     ${id?`<button class="pn-del" onclick="excluirProduto('${id}')">🗑️ Excluir produto</button>`:''}
     <button class="pn-del" style="background:var(--cream-d);color:var(--brown-m)" onclick="renderAbaProdutos()">← Voltar</button>`;
 }
+async function uploadFoto(input){
+  const file = input.files && input.files[0];
+  if(!file) return;
+  const st = document.getElementById('fp-upload-status');
+  st.textContent = '⏳ Enviando foto...';
+  try{
+    // Redimensionar no celular antes de enviar (max 800px)
+    const img = await new Promise((res,rej)=>{
+      const i=new Image(); i.onload=()=>res(i); i.onerror=rej;
+      i.src=URL.createObjectURL(file);
+    });
+    const max=800, sc=Math.min(1, max/Math.max(img.width,img.height));
+    const cv=document.createElement('canvas');
+    cv.width=Math.round(img.width*sc); cv.height=Math.round(img.height*sc);
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    const blob=await new Promise(r=>cv.toBlob(r,'image/jpeg',0.82));
+    const nome='prod_'+Date.now()+'.jpg';
+    const r=await fetch(SUPA_URL+'/storage/v1/object/fotos/'+nome,{
+      method:'POST',
+      headers:{apikey:SUPA_KEY,Authorization:'Bearer '+SUPA_KEY,'Content-Type':'image/jpeg'},
+      body:blob
+    });
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    const url=SUPA_URL+'/storage/v1/object/public/fotos/'+nome;
+    document.getElementById('fp-foto').value=url;
+    document.getElementById('fp-foto-prev').innerHTML='<img src="'+url+'" style="width:100%;height:100%;object-fit:cover">';
+    st.textContent='✅ Foto enviada! Agora toque em Salvar.';
+    toast('✅ Foto enviada!');
+  }catch(e){
+    st.textContent='❌ Erro ao enviar. Verifique se rodou o SQL das fotos no Supabase.';
+    toast('❌ Erro no envio da foto');
+  }
+}
+
 async function salvarProduto(id){
   const d={
     nome:document.getElementById('fp-nome').value.trim(),
