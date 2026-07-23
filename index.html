@@ -278,9 +278,11 @@ textarea.pn-in{resize:vertical;min-height:70px}
 <div class="toast" id="toast"></div>
 
 <script>
-// ══════════ CONFIG ══════════
-// Se o site estiver rodando no próprio Railway, usa o mesmo endereço; senão usa a URL completa
-const API_URL = location.hostname.includes('railway.app') ? '' : 'https://solar-artes-api-production.up.railway.app';
+// ══════════ CONFIG SUPABASE ══════════
+// ⬇️ COLE AQUI os dados do seu projeto Supabase (Settings → API)
+const SUPA_URL = 'https://swkxwzzjsnppcohuhumw.supabase.co';
+const SUPA_KEY = 'sb_publishable_s_-kXuuofcmCW66HFAFx4w_kRkL-RPE';
+
 let SITE = { whatsapp:'5554997081587', pix:'54997081587', hero_titulo:'', hero_sub:'', sobre:'' };
 let PRODUTOS = [];
 let AUTH = null;
@@ -290,15 +292,22 @@ const fmt = v => 'R$ ' + Number(v||0).toFixed(2).replace('.', ',');
 function toast(m,d=2600){const e=document.getElementById('toast');e.textContent=m;e.classList.add('show');setTimeout(()=>e.classList.remove('show'),d);}
 const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
 
-async function api(method, path, body) {
-  const opts = { method, headers: { 'Content-Type':'application/json' } };
-  if (AUTH && AUTH.token) opts.headers.Authorization = 'Bearer ' + AUTH.token;
-  if (body) opts.body = JSON.stringify(body);
-  const r = await fetch(API_URL + path, opts);
-  if (r.status === 401 && AUTH) { localStorage.removeItem('solar_auth'); AUTH = null; }
-  const data = await r.json().catch(()=>({}));
-  if (!r.ok) throw Object.assign(new Error(data.error||('HTTP '+r.status)), {status:r.status, data});
-  return data;
+const HDRS = { apikey: SUPA_KEY, Authorization: 'Bearer ' + SUPA_KEY, 'Content-Type': 'application/json' };
+
+async function pub(path){
+  const r = await fetch(SUPA_URL + '/rest/v1/' + path, { headers: HDRS });
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.json();
+}
+async function rpc(fn, args){
+  const r = await fetch(SUPA_URL + '/rest/v1/rpc/' + fn, { method:'POST', headers: HDRS, body: JSON.stringify(args||{}) });
+  const d = await r.json().catch(()=>null);
+  if (!r.ok) {
+    const msg = (d && (d.message||d.hint||'')) || '';
+    if (msg.includes('nao_autenticado')) { localStorage.removeItem('solar_auth'); AUTH=null; }
+    throw Object.assign(new Error(msg||('HTTP '+r.status)), { status:r.status, msg });
+  }
+  return d;
 }
 
 // ══════════ LOJA PÚBLICA ══════════
@@ -329,7 +338,6 @@ function renderLoja(){
         <div class="pfoot"><div class="pprice">${fmt(p.venda)}<small> / unid.</small></div><button class="addb">+</button></div>
       </div></div>`;
   }).join('');
-  // Hero card = primeiro produto
   const p0=PRODUTOS[0];
   if(p0) document.getElementById('hero-card').innerHTML=
     (p0.foto?`<div style="width:130px;height:130px;border-radius:20px;overflow:hidden;margin:0 auto 14px"><img src="${esc(p0.foto)}" style="width:100%;height:100%;object-fit:cover"></div>`:`<span class="hero-card-emoji">${p0.emoji||'🌸'}</span>`)+
@@ -345,16 +353,13 @@ function aplicarConfig(){
 
 async function carregarLoja(){
   try{
-    const cfg=await api('GET','/api/config');
-    SITE={...SITE,...cfg};
+    const rows=await pub('config?select=*');
+    rows.forEach(r=>SITE[r.chave]=r.valor);
   }catch{}
   aplicarConfig();
   try{
-    const prods=await api('GET','/api/sync');
-    PRODUTOS=(prods.produtos||[]).filter(p=>Number(p.estoque)!==0||true);
-  }catch{
-    try{ PRODUTOS=await api('GET','/api/produtos'); }catch{ PRODUTOS=FALLBACK; }
-  }
+    PRODUTOS=await pub('produtos?select=*&ativo=eq.true&order=nome');
+  }catch{ PRODUTOS=FALLBACK; }
   if(!PRODUTOS.length) PRODUTOS=FALLBACK;
   renderLoja();
 }
@@ -396,12 +401,14 @@ async function fazerLogin(){
   err.textContent='';
   if(!u||!s){err.textContent='Preencha usuário e senha';return;}
   try{
-    const d=await api('POST','/api/login',{usuario:u,senha:s});
+    const d=await rpc('fn_login',{p_usuario:u,p_senha:s});
     AUTH={token:d.token,nome:d.nome,usuario:d.usuario,role:d.role,id:d.id};
     localStorage.setItem('solar_auth',JSON.stringify(AUTH));
     document.getElementById('l-sen').value='';
     fecharLogin();abrirPainel();toast('☀ Bem-vindo(a), '+d.nome+'!');
-  }catch(e){err.textContent=e.status===401?'Usuário ou senha incorretos':'Sem conexão com o servidor';}
+  }catch(e){
+    err.textContent=(e.msg||'').includes('login_invalido')?'Usuário ou senha incorretos':'Sem conexão com o servidor';
+  }
 }
 function sairConta(){localStorage.removeItem('solar_auth');AUTH=null;fecharPainel();toast('Você saiu da conta');}
 
@@ -427,7 +434,7 @@ function trocarAba(aba){
 async function renderAbaProdutos(){
   const b=document.getElementById('pn-body');
   b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
-  try{PRODUTOS=await api('GET','/api/produtos');}catch{}
+  try{PRODUTOS=await pub('produtos?select=*&ativo=eq.true&order=nome');}catch{}
   b.innerHTML='<button class="pn-add" onclick="formProduto()">+ Novo produto</button>'+
     (PRODUTOS.length?PRODUTOS.map(p=>`<div class="pn-card"><div class="pn-row">
       <div style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">
@@ -449,7 +456,7 @@ function formProduto(id){
     <span class="pn-lbl">Descrição (aparece na loja)</span><textarea class="pn-in" id="fp-desc">${esc(p.descricao||'')}</textarea>
     <span class="pn-lbl">Foto (link da imagem — opcional)</span><input class="pn-in" id="fp-foto" placeholder="https://..." value="${esc(p.foto||'')}">
     <span class="pn-lbl">Emoji (se não tiver foto)</span><input class="pn-in" id="fp-emoji" maxlength="4" value="${p.emoji||'🌿'}">
-    <span class="pn-lbl">Etiqueta (ex: Novidade, Mais vendido — opcional)</span><input class="pn-in" id="fp-tag" value="${esc(p.tag||'')}">
+    <span class="pn-lbl">Etiqueta (ex: Novidade — opcional)</span><input class="pn-in" id="fp-tag" value="${esc(p.tag||'')}">
     <button class="pn-save" onclick="salvarProduto('${id||''}')">💾 Salvar</button>
     ${id?`<button class="pn-del" onclick="excluirProduto('${id}')">🗑️ Excluir produto</button>`:''}
     <button class="pn-del" style="background:var(--cream-d);color:var(--brown-m)" onclick="renderAbaProdutos()">← Voltar</button>`;
@@ -467,12 +474,12 @@ async function salvarProduto(id){
   };
   if(!d.nome){toast('Informe o nome');return;}
   if(id)d.id=id;
-  try{await api('POST','/api/produtos',d);toast('✅ Produto salvo!');renderAbaProdutos();}
+  try{await rpc('fn_salvar_produto',{p_token:AUTH.token,p:d});toast('✅ Produto salvo!');renderAbaProdutos();}
   catch{toast('❌ Erro ao salvar');}
 }
 async function excluirProduto(id){
   if(!confirm('Excluir este produto?'))return;
-  try{await api('DELETE','/api/produtos/'+id);toast('Produto excluído');renderAbaProdutos();}
+  try{await rpc('fn_excluir_produto',{p_token:AUTH.token,p_id:id});toast('Produto excluído');renderAbaProdutos();}
   catch{toast('❌ Erro ao excluir');}
 }
 
@@ -480,10 +487,10 @@ async function excluirProduto(id){
 async function renderAbaVendas(){
   const b=document.getElementById('pn-body');
   b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
-  try{const s=await api('GET','/api/sync');VENDAS=s.vendas||[];PRODUTOS=s.produtos||PRODUTOS;}catch{}
+  try{VENDAS=await rpc('fn_listar_vendas',{p_token:AUTH.token})||[];}catch{VENDAS=[];}
+  try{if(!PRODUTOS.length)PRODUTOS=await pub('produtos?select=*&ativo=eq.true&order=nome');}catch{}
   const hoje=new Date().toISOString().slice(0,10);
-  const vHoje=VENDAS.filter(v=>String(v.data).slice(0,10)===hoje);
-  const totHoje=vHoje.reduce((a,v)=>a+Number(v.total),0);
+  const totHoje=VENDAS.filter(v=>String(v.data).slice(0,10)===hoje).reduce((a,v)=>a+Number(v.total),0);
   const totMes=VENDAS.filter(v=>String(v.data).slice(0,7)===hoje.slice(0,7)).reduce((a,v)=>a+Number(v.total),0);
   b.innerHTML=`<div class="stat-strip">
       <div class="stat-c"><div class="stat-v">${fmt(totHoje)}</div><div class="stat-l">Hoje</div></div>
@@ -497,7 +504,7 @@ async function renderAbaVendas(){
         <div style="flex:1;min-width:0"><div style="font-weight:600;font-size:14px">${fmt(v.total)} · ${v.pagamento}</div>
         <div style="font-size:12px;color:var(--brown-l);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(v.data).slice(0,10).split('-').reverse().join('/')} · ${esc(itens)}</div></div>
         <div style="display:flex;gap:10px;align-items:center">
-          ${v.pagamento==='prazo'?`<span onclick="togglePago('${v.id}',${v.pago?0:1})" style="cursor:pointer;font-size:11px;padding:4px 9px;border-radius:100px;background:${v.pago?'#DCF5E3':'#FCE9E5'};color:${v.pago?'#1B7A3D':'#8A3D35'};font-weight:700">${v.pago?'PAGO':'PENDENTE'}</span>`:''}
+          ${v.pagamento==='prazo'?`<span onclick="togglePago('${v.id}',${v.pago?'false':'true'})" style="cursor:pointer;font-size:11px;padding:4px 9px;border-radius:100px;background:${v.pago?'#DCF5E3':'#FCE9E5'};color:${v.pago?'#1B7A3D':'#8A3D35'};font-weight:700">${v.pago?'PAGO':'PENDENTE'}</span>`:''}
           <span onclick="excluirVenda('${v.id}')" style="cursor:pointer;font-size:15px">🗑️</span>
         </div></div></div>`;}).join(''):'<div class="pn-empty">Nenhuma venda ainda</div>');
 }
@@ -520,15 +527,12 @@ function addItemVenda(){
   const qtd=parseInt(document.getElementById('fv-qtd').value)||1;
   const p=PRODUTOS.find(x=>x.id===pid);if(!p)return;
   VENDA_ITENS.push({prodId:p.id,nome:p.nome,qtd,preco:Number(p.venda),custo:Number(p.custo)});
-  document.getElementById('fv-itens').innerHTML=VENDA_ITENS.map((i,x)=>
-    `<div class="pn-card"><div class="pn-row"><div style="font-size:13px">${i.qtd}x ${esc(i.nome)} — ${fmt(i.preco*i.qtd)}</div>
-    <span onclick="VENDA_ITENS.splice(${x},1);addItemVenda_r()" style="cursor:pointer">✕</span></div></div>`).join('')+
-    `<div style="text-align:right;font-family:var(--fd);font-size:18px;margin:8px 0">Total: ${fmt(VENDA_ITENS.reduce((a,i)=>a+i.preco*i.qtd,0))}</div>`;
+  renderItensVenda();
 }
-function addItemVenda_r(){
+function renderItensVenda(){
   document.getElementById('fv-itens').innerHTML=VENDA_ITENS.map((i,x)=>
     `<div class="pn-card"><div class="pn-row"><div style="font-size:13px">${i.qtd}x ${esc(i.nome)} — ${fmt(i.preco*i.qtd)}</div>
-    <span onclick="VENDA_ITENS.splice(${x},1);addItemVenda_r()" style="cursor:pointer">✕</span></div></div>`).join('')+
+    <span onclick="VENDA_ITENS.splice(${x},1);renderItensVenda()" style="cursor:pointer">✕</span></div></div>`).join('')+
     (VENDA_ITENS.length?`<div style="text-align:right;font-family:var(--fd);font-size:18px;margin:8px 0">Total: ${fmt(VENDA_ITENS.reduce((a,i)=>a+i.preco*i.qtd,0))}</div>`:'');
 }
 async function salvarVenda(){
@@ -540,27 +544,26 @@ async function salvarVenda(){
   if(pag==='prazo'){
     const venc=new Date();venc.setDate(venc.getDate()+30);
     venda.vencimento=venc.toISOString().slice(0,10);
-    venda.agendaItem={tipo:'prazo',titulo:'Cobrar venda '+fmt(total),data:venda.vencimento};
   }
-  try{await api('POST','/api/vendas',venda);toast('✅ Venda registrada!');renderAbaVendas();}
+  try{await rpc('fn_registrar_venda',{p_token:AUTH.token,p:venda});toast('✅ Venda registrada!');renderAbaVendas();}
   catch{toast('❌ Erro ao registrar');}
 }
-async function togglePago(id,pago){try{await api('PUT','/api/vendas/'+id,{pago:!!pago});renderAbaVendas();}catch{toast('Erro');}}
-async function excluirVenda(id){if(!confirm('Excluir esta venda?'))return;try{await api('DELETE','/api/vendas/'+id);toast('Venda excluída');renderAbaVendas();}catch{toast('Erro');}}
+async function togglePago(id,pago){try{await rpc('fn_marcar_pago',{p_token:AUTH.token,p_id:id,p_pago:pago===true||pago==='true'});renderAbaVendas();}catch{toast('Erro');}}
+async function excluirVenda(id){if(!confirm('Excluir esta venda?'))return;try{await rpc('fn_excluir_venda',{p_token:AUTH.token,p_id:id});toast('Venda excluída');renderAbaVendas();}catch{toast('Erro');}}
 
 // ── ABA SITE ──
 async function renderAbaSite(){
   const b=document.getElementById('pn-body');
-  try{const cfg=await api('GET','/api/config');SITE={...SITE,...cfg};}catch{}
+  try{const rows=await pub('config?select=*');rows.forEach(r=>SITE[r.chave]=r.valor);}catch{}
   b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:6px">Editar site</div>
     <div style="font-size:13px;color:var(--brown-l);margin-bottom:14px">Tudo que você mudar aqui aparece na loja na hora.</div>
     <span class="pn-lbl">Título principal (aceita &lt;em&gt;itálico dourado&lt;/em&gt;)</span>
     <input class="pn-in" id="fs-titulo" value="${esc(SITE.hero_titulo||'Beleza que nasce <em>da natureza</em>')}">
     <span class="pn-lbl">Subtítulo</span>
     <textarea class="pn-in" id="fs-sub">${esc(SITE.hero_sub||'Cosméticos artesanais feitos com amor, ingredientes naturais e a energia do sol.')}</textarea>
-    <span class="pn-lbl">Texto do rodapé (sobre a loja)</span>
+    <span class="pn-lbl">Texto do rodapé</span>
     <textarea class="pn-in" id="fs-sobre">${esc(SITE.sobre||'Cosméticos artesanais feitos com amor, ingredientes naturais e a energia do sol.')}</textarea>
-    <span class="pn-lbl">WhatsApp (com código do país, ex: 5554997081587)</span>
+    <span class="pn-lbl">WhatsApp (com código do país)</span>
     <input class="pn-in" id="fs-wpp" value="${esc(SITE.whatsapp)}">
     <span class="pn-lbl">Chave Pix</span>
     <input class="pn-in" id="fs-pix" value="${esc(SITE.pix)}">
@@ -574,7 +577,7 @@ async function salvarSite(){
     whatsapp:document.getElementById('fs-wpp').value.trim(),
     pix:document.getElementById('fs-pix').value.trim()
   };
-  try{await api('PUT','/api/config',d);SITE={...SITE,...d};aplicarConfig();toast('✅ Site atualizado!');}
+  try{await rpc('fn_salvar_config',{p_token:AUTH.token,p:d});Object.assign(SITE,d);aplicarConfig();toast('✅ Site atualizado!');}
   catch{toast('❌ Erro ao salvar');}
 }
 
@@ -582,9 +585,9 @@ async function salvarSite(){
 async function renderAbaUsuarios(){
   const b=document.getElementById('pn-body');
   b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
-  try{USUARIOS=await api('GET','/api/usuarios');}catch{b.innerHTML='<div class="pn-empty">Erro ao carregar</div>';return;}
+  try{USUARIOS=await rpc('fn_listar_usuarios',{p_token:AUTH.token})||[];}catch{b.innerHTML='<div class="pn-empty">Erro ao carregar</div>';return;}
   b.innerHTML='<button class="pn-add" onclick="formUsuario()">+ Novo usuário</button>'+
-    USUARIOS.filter(u=>u.ativo).map(u=>`<div class="pn-card"><div class="pn-row">
+    USUARIOS.map(u=>`<div class="pn-card"><div class="pn-row">
       <div><div style="font-weight:600;font-size:14px">${esc(u.nome)}</div><div style="font-size:12px;color:var(--brown-l)">@${esc(u.usuario)}</div></div>
       <div style="display:flex;gap:10px;align-items:center">
         <span class="role-pill${u.role==='superadmin'?' sup':''}">${u.role==='superadmin'?'Admin':'Vend.'}</span>
@@ -609,12 +612,12 @@ async function salvarUsuario(){
   const role=document.getElementById('fu-role').value;
   if(!nome||!usuario||!senha){toast('Preencha todos os campos');return;}
   if(senha.length<4){toast('Senha muito curta (mín. 4)');return;}
-  try{await api('POST','/api/usuarios',{nome,usuario,senha,role});toast('✅ Usuário criado!');renderAbaUsuarios();}
-  catch(e){toast(e.data&&e.data.error==='usuario_ja_existe'?'Este usuário já existe':'❌ Erro ao criar');}
+  try{await rpc('fn_criar_usuario',{p_token:AUTH.token,p_nome:nome,p_usuario:usuario,p_senha:senha,p_role:role});toast('✅ Usuário criado!');renderAbaUsuarios();}
+  catch(e){toast((e.msg||'').includes('usuario_ja_existe')?'Este usuário já existe':'❌ Erro ao criar');}
 }
 async function excluirUsuario(id,nome){
   if(!confirm('Excluir o usuário '+nome+'?'))return;
-  try{await api('DELETE','/api/usuarios/'+id);toast('Usuário excluído');renderAbaUsuarios();}
+  try{await rpc('fn_excluir_usuario',{p_token:AUTH.token,p_id:id});toast('Usuário excluído');renderAbaUsuarios();}
   catch{toast('Erro ao excluir');}
 }
 
