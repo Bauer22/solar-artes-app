@@ -234,9 +234,37 @@ select.form-input { -webkit-appearance: none; background-image: url("data:image/
 .row-actions { display: flex; gap: 8px; }
 
   @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── LOGIN ── */
+.login-overlay{position:fixed;inset:0;background:linear-gradient(160deg,#2C1A0E,#5C3D1E);z-index:9999;display:flex;align-items:center;justify-content:center;padding:24px;}
+.login-card{background:rgba(250,247,242,.98);border-radius:28px;padding:40px 28px;width:100%;max-width:380px;box-shadow:0 24px 80px rgba(0,0,0,.4);text-align:center;}
+.login-sun{font-size:52px;filter:drop-shadow(0 0 14px rgba(201,168,76,.6));margin-bottom:8px;}
+.login-title{font-family:'Playfair Display',serif;font-size:26px;color:#2C1A0E;margin-bottom:4px;}
+.login-sub{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:#A07850;margin-bottom:28px;}
+.login-input{width:100%;padding:15px 18px;border-radius:14px;border:1.5px solid #E8DCC8;background:#fff;font-family:'Jost',sans-serif;font-size:15px;color:#2C1A0E;margin-bottom:12px;outline:none;transition:border-color .2s;}
+.login-input:focus{border-color:#C9A84C;}
+.login-btn{width:100%;padding:16px;border-radius:14px;background:linear-gradient(135deg,#C9A84C,#E8C97A);color:#2C1A0E;font-size:13px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-top:6px;box-shadow:0 4px 18px rgba(201,168,76,.35);}
+.login-err{color:#8A3D35;font-size:12px;margin-top:12px;min-height:16px;}
+.usr-modal-list{max-height:280px;overflow-y:auto;margin-bottom:14px;}
+.usr-item{display:flex;align-items:center;justify-content:space-between;padding:12px;background:#fff;border-radius:12px;margin-bottom:8px;}
+.usr-role{font-size:9px;letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:100px;background:rgba(201,168,76,.15);color:#8B6914;font-weight:700;}
+.usr-role.super{background:rgba(196,117,106,.15);color:#8A3D35;}
+
 </style>
 </head>
 <body>
+<!-- LOGIN -->
+<div class="login-overlay" id="login-overlay" style="display:none">
+  <div class="login-card">
+    <div class="login-sun">☀</div>
+    <div class="login-title">Solar Artes</div>
+    <div class="login-sub">Acesso ao sistema</div>
+    <input class="login-input" id="login-usuario" placeholder="Usuário" autocomplete="username" autocapitalize="none">
+    <input class="login-input" id="login-senha" type="password" placeholder="Senha" autocomplete="current-password" onkeydown="if(event.key==='Enter')fazerLogin()">
+    <button class="login-btn" onclick="fazerLogin()">Entrar</button>
+    <div class="login-err" id="login-err"></div>
+  </div>
+</div>
 <div class="app">
   <div class="status-bar"></div>
 
@@ -252,6 +280,7 @@ select.form-input { -webkit-appearance: none; background-image: url("data:image/
       </div>
       <div style="display:flex;gap:8px;align-items:center">
         <div id="sync-btn" onclick="forcSync()" style="width:32px;height:32px;background:rgba(201,168,76,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" title="Sincronizar agora">🔄</div>
+        <div id="user-btn" onclick="abrirUsuarios()" style="width:32px;height:32px;background:rgba(201,168,76,0.12);border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px" title="Conta">👤</div>
         <div class="header-notif" onclick="showNotifications()">
           <div class="header-notif-icon">🔔</div>
           <div class="notif-badge" id="notif-badge"></div>
@@ -714,6 +743,162 @@ select.form-input { -webkit-appearance: none; background-image: url("data:image/
 </div>
 
 <script>
+// ══════════════════════════════════════════════════════════════
+// AUTENTICAÇÃO
+// ══════════════════════════════════════════════════════════════
+let AUTH = null;
+try { AUTH = JSON.parse(localStorage.getItem('solar_auth') || 'null'); } catch { AUTH = null; }
+
+function mostrarLogin() {
+  document.getElementById('login-overlay').style.display = 'flex';
+}
+function esconderLogin() {
+  document.getElementById('login-overlay').style.display = 'none';
+}
+
+async function fazerLogin() {
+  const usuario = document.getElementById('login-usuario').value.trim();
+  const senha   = document.getElementById('login-senha').value;
+  const errEl   = document.getElementById('login-err');
+  errEl.textContent = '';
+  if (!usuario || !senha) { errEl.textContent = 'Preencha usuário e senha'; return; }
+  try {
+    const r = await fetch(API_URL + '/api/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usuario, senha })
+    });
+    const data = await r.json();
+    if (!r.ok) { errEl.textContent = data.error === 'usuario_ou_senha_invalidos' ? 'Usuário ou senha incorretos' : 'Erro ao entrar'; return; }
+    AUTH = { token: data.token, nome: data.nome, usuario: data.usuario, role: data.role };
+    localStorage.setItem('solar_auth', JSON.stringify(AUTH));
+    esconderLogin();
+    document.getElementById('login-senha').value = '';
+    toast('☀ Bem-vindo(a), ' + data.nome + '!');
+  } catch(e) {
+    errEl.textContent = 'Sem conexão com o servidor';
+  }
+}
+
+function sairConta() {
+  localStorage.removeItem('solar_auth');
+  AUTH = null;
+  location.reload();
+}
+
+async function verificarSessao() {
+  if (!AUTH || !AUTH.token) { mostrarLogin(); return false; }
+  try {
+    const r = await fetch(API_URL + '/api/me', { headers: { Authorization: 'Bearer ' + AUTH.token } });
+    if (!r.ok) { mostrarLogin(); return false; }
+    return true;
+  } catch { return true; } // offline: deixa usar com cache
+}
+
+// ── GESTÃO DE USUÁRIOS (superadmin) ──────────────────────────
+async function abrirUsuarios() {
+  if (!AUTH) { mostrarLogin(); return; }
+  let html = '<div style="text-align:center;margin-bottom:14px"><div style="font-size:32px">👤</div>' +
+    '<div style="font-weight:600;font-size:16px">' + AUTH.nome + '</div>' +
+    '<div style="font-size:11px;color:var(--brown-l,#A07850);text-transform:uppercase;letter-spacing:.1em">' + (AUTH.role==='superadmin'?'Super Admin':'Vendedor(a)') + '</div></div>';
+
+  if (AUTH.role === 'superadmin') {
+    html += '<div id="usr-lista" class="usr-modal-list"><div style="text-align:center;padding:16px;color:#A07850">Carregando...</div></div>';
+    html += '<button class="login-btn" style="margin-bottom:10px" onclick="novoUsuarioForm()">+ Novo usuário</button>';
+  }
+  html += '<button class="login-btn" style="background:#EDD5D0;color:#8A3D35;box-shadow:none" onclick="sairConta()">Sair da conta</button>';
+
+  abrirModalCustom('Minha conta', html);
+  if (AUTH.role === 'superadmin') carregarUsuarios();
+}
+
+function abrirModalCustom(titulo, innerHtml) {
+  let m = document.getElementById('usr-modal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'usr-modal';
+    m.style.cssText = 'position:fixed;inset:0;background:rgba(44,26,14,.5);z-index:5000;display:flex;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)';
+    m.innerHTML = '<div style="background:#FAF7F2;border-radius:24px;padding:24px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px"><div id="usr-modal-title" style="font-weight:700;font-size:18px"></div><div onclick="fecharModalUsr()" style="width:30px;height:30px;background:#F0EBE0;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer">✕</div></div><div id="usr-modal-body"></div></div>';
+    m.addEventListener('click', e => { if (e.target === m) fecharModalUsr(); });
+    document.body.appendChild(m);
+  }
+  document.getElementById('usr-modal-title').textContent = titulo;
+  document.getElementById('usr-modal-body').innerHTML = innerHtml;
+  m.style.display = 'flex';
+}
+function fecharModalUsr() {
+  const m = document.getElementById('usr-modal');
+  if (m) m.style.display = 'none';
+}
+
+async function carregarUsuarios() {
+  try {
+    const r = await fetch(API_URL + '/api/usuarios', { headers: { Authorization: 'Bearer ' + AUTH.token } });
+    if (!r.ok) throw new Error();
+    const users = await r.json();
+    const el = document.getElementById('usr-lista');
+    if (!el) return;
+    el.innerHTML = users.filter(u => u.ativo).map(u =>
+      '<div class="usr-item"><div><div style="font-weight:600;font-size:14px">' + u.nome + '</div>' +
+      '<div style="font-size:11px;color:#A07850">@' + u.usuario + '</div></div>' +
+      '<div style="display:flex;gap:8px;align-items:center">' +
+      '<span class="usr-role' + (u.role==='superadmin'?' super':'') + '">' + (u.role==='superadmin'?'Admin':'Vend.') + '</span>' +
+      (u.id !== AUTH.id && u.usuario !== AUTH.usuario ? '<span onclick="excluirUsuario(\'' + u.id + '\',\'' + u.nome + '\')" style="cursor:pointer;font-size:15px">🗑️</span>' : '') +
+      '</div></div>'
+    ).join('') || '<div style="text-align:center;padding:12px;color:#A07850">Nenhum usuário</div>';
+  } catch {
+    const el = document.getElementById('usr-lista');
+    if (el) el.innerHTML = '<div style="text-align:center;padding:12px;color:#8A3D35">Erro ao carregar</div>';
+  }
+}
+
+function novoUsuarioForm() {
+  abrirModalCustom('Novo usuário',
+    '<input class="login-input" id="nu-nome" placeholder="Nome completo">' +
+    '<input class="login-input" id="nu-usuario" placeholder="Usuário (login)" autocapitalize="none">' +
+    '<input class="login-input" id="nu-senha" type="password" placeholder="Senha">' +
+    '<select class="login-input" id="nu-role"><option value="vendedor">Vendedor(a)</option><option value="superadmin">Super Admin</option></select>' +
+    '<button class="login-btn" onclick="salvarNovoUsuario()">Criar usuário</button>' +
+    '<div class="login-err" id="nu-err"></div>'
+  );
+}
+
+async function salvarNovoUsuario() {
+  const nome = document.getElementById('nu-nome').value.trim();
+  const usuario = document.getElementById('nu-usuario').value.trim();
+  const senha = document.getElementById('nu-senha').value;
+  const role = document.getElementById('nu-role').value;
+  const err = document.getElementById('nu-err');
+  err.textContent = '';
+  if (!nome || !usuario || !senha) { err.textContent = 'Preencha todos os campos'; return; }
+  if (senha.length < 4) { err.textContent = 'Senha muito curta (mín. 4)'; return; }
+  try {
+    const r = await fetch(API_URL + '/api/usuarios', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + AUTH.token },
+      body: JSON.stringify({ nome, usuario, senha, role })
+    });
+    const data = await r.json();
+    if (!r.ok) { err.textContent = data.error === 'usuario_ja_existe' ? 'Este usuário já existe' : 'Erro ao criar'; return; }
+    fecharModalUsr();
+    toast('✅ Usuário ' + nome + ' criado!');
+    setTimeout(abrirUsuarios, 300);
+  } catch { err.textContent = 'Sem conexão'; }
+}
+
+async function excluirUsuario(id, nome) {
+  if (!confirm('Excluir o usuário ' + nome + '?')) return;
+  try {
+    await fetch(API_URL + '/api/usuarios/' + id, {
+      method: 'DELETE',
+      headers: { Authorization: 'Bearer ' + AUTH.token }
+    });
+    toast('Usuário excluído');
+    carregarUsuarios();
+  } catch { toast('Erro ao excluir'); }
+}
+
+
 // ── CONFIGURAÇÃO ──────────────────────────────────────────────────────────────
 const API_URL   = 'https://solar-artes-api-production.up.railway.app';
 const CACHE_KEY = 'solar_artes_v4';
@@ -1602,6 +1787,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   initRelatorios();
   checkNotificacoesSistema();
   setInterval(checkNotificacoesSistema, 60000);
+
+  // Verificar login
+  await verificarSessao();
 
   // Depois sincroniza com nuvem
   await syncFromCloud();
