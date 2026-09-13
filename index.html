@@ -337,6 +337,8 @@ textarea.pn-in{resize:vertical;min-height:72px}
   </div>
   <div class="pn-tabs" id="pn-tabs">
     <div class="pn-tab on" data-tab="produtos" onclick="trocarAba('produtos')">📦 Produtos</div>
+    <div class="pn-tab" data-tab="estoque" onclick="trocarAba('estoque')">📊 Estoque</div>
+    <div class="pn-tab" data-tab="pedidos" onclick="trocarAba('pedidos')">🛎️ Pedidos <span id="ped-badge" style="display:none;background:#F0958A;color:#0A0D12;border-radius:100px;padding:1px 7px;font-size:10px;margin-left:4px"></span></div>
     <div class="pn-tab" data-tab="vendas" onclick="trocarAba('vendas')">💰 Vendas</div>
     <div class="pn-tab" data-tab="site" onclick="trocarAba('site')">🎨 Site</div>
     <div class="pn-tab" data-tab="usuarios" id="tab-usuarios" onclick="trocarAba('usuarios')" style="display:none">👤 Usuários</div>
@@ -465,12 +467,25 @@ function renderCart(){
 }
 const openCart=()=>{document.getElementById('dbg').classList.add('open');document.getElementById('drawer').classList.add('open');};
 const closeCart=()=>{document.getElementById('dbg').classList.remove('open');document.getElementById('drawer').classList.remove('open');};
-function pedirWpp(){
+async function pedirWpp(){
   if(!cart.length){toast('Adicione produtos primeiro!');return;}
   const tot=cart.reduce((a,i)=>a+i.preco*i.qty,0);
+  // Perguntar nome do cliente (opcional)
+  const nome=(prompt('Seu nome para o pedido (opcional):')||'').trim();
   const itens=cart.map(i=>`• ${i.qty}x ${i.nome} — ${fmt(i.preco*i.qty)}`).join('\n');
-  const msg=`☀ *Pedido Solar Artes*\n\n${itens}\n\n*Total: ${fmt(tot)}*\n\nOlá! Gostaria de confirmar meu pedido 🌸`;
+  // Registrar pedido PENDENTE no sistema (não trava se falhar)
+  try{
+    await rpc('fn_pedido_loja',{p:{
+      itens: cart.map(i=>({prodId:i.id,nome:i.nome,qtd:i.qty,preco:i.preco,custo:0})),
+      total: tot, lucro: tot, pagamento:'a combinar',
+      cliente_nome: nome||null, cliente_fone:null
+    }});
+  }catch(e){ console.warn('pedido nao registrado no sistema', e); }
+  // Abrir WhatsApp
+  const saud = nome ? ('Olá! Sou '+nome+' e gostaria') : 'Olá! Gostaria';
+  const msg=`☀ *Pedido Solar Artes*\n\n${itens}\n\n*Total: ${fmt(tot)}*\n\n${saud} de confirmar meu pedido 🌸`;
   window.open('https://wa.me/'+String(SITE.whatsapp).replace(/\D/g,'')+'?text='+encodeURIComponent(msg),'_blank');
+  toast('✅ Pedido enviado! Aguarde a confirmação.');
 }
 function copyPix(){navigator.clipboard.writeText(SITE.pix).then(()=>toast('✅ Chave Pix copiada!')).catch(()=>toast('Chave: '+SITE.pix,4000));}
 
@@ -500,12 +515,16 @@ function abrirPainel(){
   document.getElementById('pn-nome').textContent=AUTH.nome;
   document.getElementById('tab-usuarios').style.display=AUTH.role==='superadmin'?'block':'none';
   trocarAba('produtos');
+  checarPedidosNovos();
+  if(!window._pedInterval) window._pedInterval=setInterval(checarPedidosNovos,45000);
 }
 function fecharPainel(){document.getElementById('panel').classList.remove('open');carregarLoja();}
 function trocarAba(aba){
   ABA=aba;
   document.querySelectorAll('.pn-tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===aba));
   if(aba==='produtos')renderAbaProdutos();
+  if(aba==='estoque')renderAbaEstoque();
+  if(aba==='pedidos')renderAbaPedidos();
   if(aba==='vendas')renderAbaVendas();
   if(aba==='site')renderAbaSite();
   if(aba==='usuarios')renderAbaUsuarios();
@@ -681,6 +700,84 @@ async function salvarVenda(){
 }
 async function togglePago(id,pago){try{await rpc('fn_marcar_pago',{p_token:AUTH.token,p_id:id,p_pago:pago===true||pago==='true'});renderAbaVendas();}catch{toast('Erro');}}
 async function excluirVenda(id){if(!confirm('Excluir esta venda?'))return;try{await rpc('fn_excluir_venda',{p_token:AUTH.token,p_id:id});toast('Venda excluída');renderAbaVendas();}catch{toast('Erro');}}
+
+// ── ABA ESTOQUE ──
+async function renderAbaEstoque(){
+  const b=document.getElementById('pn-body');
+  b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
+  try{PRODUTOS=await pub('produtos?select=*&order=nome');}catch{}
+  const baixo=PRODUTOS.filter(p=>Number(p.estoque)<=Number(p.estoque_min||3));
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:6px">Controle de estoque</div>
+    <div style="font-size:13px;color:var(--brown-l);margin-bottom:16px">${baixo.length?('⚠️ '+baixo.length+' produto(s) com estoque baixo'):'Todos os produtos com estoque saudável ✓'}</div>`+
+    PRODUTOS.map(p=>{
+      const low=Number(p.estoque)<=Number(p.estoque_min||3);
+      return `<div class="pn-card"><div class="pn-row">
+        <div style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">
+          <div style="width:42px;height:42px;border-radius:8px;background:#12161D;display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden;flex-shrink:0">${p.foto?`<img src="${esc(p.foto)}" style="width:100%;height:100%;object-fit:cover">`:(p.emoji||'🌿')}</div>
+          <div style="min-width:0"><div style="font-weight:500;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nome)}</div>
+          <div style="font-size:12px;color:${low?'#F0958A':'var(--brown-l)'}">${low?'⚠️ ':''}estoque ${p.estoque} · mín ${p.estoque_min||3}</div></div>
+        </div>
+        <div style="display:flex;gap:6px;align-items:center">
+          <button onclick="ajusteRapido('${p.id}',-1)" class="qb" style="width:32px;height:32px">−</button>
+          <input id="est-${p.id}" value="${p.estoque}" style="width:52px;text-align:center;padding:8px 4px;border-radius:8px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#fff;font-size:14px">
+          <button onclick="ajusteRapido('${p.id}',1)" class="qb" style="width:32px;height:32px">+</button>
+          <button onclick="salvarEstoque('${p.id}')" style="padding:8px 12px;border-radius:8px;background:var(--white);color:#0A0D12;font-size:11px;font-weight:600">OK</button>
+        </div></div></div>`;
+    }).join('');
+}
+function ajusteRapido(id,delta){
+  const inp=document.getElementById('est-'+id);
+  inp.value=Math.max(0,(parseInt(inp.value)||0)+delta);
+}
+async function salvarEstoque(id){
+  const val=parseInt(document.getElementById('est-'+id).value)||0;
+  const p=PRODUTOS.find(x=>x.id===id);
+  try{await rpc('fn_ajustar_estoque',{p_token:AUTH.token,p_id:id,p_estoque:val,p_min:p?Number(p.estoque_min||3):3});toast('✅ Estoque atualizado');renderAbaEstoque();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro ao salvar');}
+}
+
+// ── ABA PEDIDOS (da loja online) ──
+async function renderAbaPedidos(){
+  const b=document.getElementById('pn-body');
+  b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
+  let pedidos=[];
+  try{pedidos=await rpc('fn_listar_pedidos',{p_token:AUTH.token})||[];}catch(e){if((e.msg||'').includes('nao_autenticado'))return;}
+  atualizarBadgePedidos(pedidos.length);
+  if(!pedidos.length){b.innerHTML='<div class="pn-empty">🛎️<br>Nenhum pedido novo da loja</div>';return;}
+  b.innerHTML='<div style="font-family:var(--fd);font-size:20px;margin-bottom:16px">Pedidos da loja ('+pedidos.length+')</div>'+
+    pedidos.map(v=>{
+      const itens=(v.itens||[]).map(i=>i.qtd+'x '+(i.nome||'')).join(', ');
+      return `<div class="pn-card" style="border-color:rgba(95,211,194,.3)">
+        <div style="display:flex;justify-content:space-between;align-items:start;gap:10px;margin-bottom:10px">
+          <div style="flex:1"><div style="font-family:var(--fd);font-size:18px;color:#fff">${fmt(v.total)}</div>
+          <div style="font-size:13px;color:var(--brown-m);margin-top:2px">${esc(itens)}</div>
+          ${v.cliente_nome?`<div style="font-size:12px;color:var(--brown-l);margin-top:6px">👤 ${esc(v.cliente_nome)}${v.cliente_fone?' · 📱 '+esc(v.cliente_fone):''}</div>`:''}
+          <div style="font-size:11px;color:var(--brown-l);margin-top:2px">Pagamento: ${esc(v.pagamento)}</div></div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button onclick="confirmarPedido('${v.id}')" style="flex:1;padding:12px;border-radius:100px;background:#5FD3C2;color:#0A0D12;font-size:12px;font-weight:600;letter-spacing:.06em">✓ CONFIRMAR (baixa estoque)</button>
+          <button onclick="recusarPedido('${v.id}')" style="padding:12px 16px;border-radius:100px;background:transparent;border:1px solid rgba(240,150,138,.4);color:#F0958A;font-size:12px;font-weight:600">✕</button>
+        </div></div>`;
+    }).join('');
+}
+function atualizarBadgePedidos(n){
+  const badge=document.getElementById('ped-badge');
+  if(!badge)return;
+  if(n>0){badge.textContent=n;badge.style.display='inline-block';}else{badge.style.display='none';}
+}
+async function confirmarPedido(id){
+  try{await rpc('fn_confirmar_pedido',{p_token:AUTH.token,p_id:id});toast('✅ Pedido confirmado! Estoque atualizado.');renderAbaPedidos();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro ao confirmar');}
+}
+async function recusarPedido(id){
+  if(!confirm('Recusar e excluir este pedido?'))return;
+  try{await rpc('fn_recusar_pedido',{p_token:AUTH.token,p_id:id});toast('Pedido recusado');renderAbaPedidos();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+async function checarPedidosNovos(){
+  if(!AUTH||!AUTH.token)return;
+  try{const p=await rpc('fn_listar_pedidos',{p_token:AUTH.token});atualizarBadgePedidos((p||[]).length);}catch{}
+}
 
 // ── ABA SITE ──
 async function renderAbaSite(){
