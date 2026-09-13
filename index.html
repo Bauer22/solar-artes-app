@@ -336,10 +336,12 @@ textarea.pn-in{resize:vertical;min-height:72px}
     </div>
   </div>
   <div class="pn-tabs" id="pn-tabs">
-    <div class="pn-tab on" data-tab="produtos" onclick="trocarAba('produtos')">📦 Produtos</div>
+    <div class="pn-tab on" data-tab="dashboard" onclick="trocarAba('dashboard')">📈 Painel</div>
+    <div class="pn-tab" data-tab="produtos" onclick="trocarAba('produtos')">📦 Produtos</div>
     <div class="pn-tab" data-tab="estoque" onclick="trocarAba('estoque')">📊 Estoque</div>
     <div class="pn-tab" data-tab="pedidos" onclick="trocarAba('pedidos')">🛎️ Pedidos <span id="ped-badge" style="display:none;background:#F0958A;color:#0A0D12;border-radius:100px;padding:1px 7px;font-size:10px;margin-left:4px"></span></div>
     <div class="pn-tab" data-tab="vendas" onclick="trocarAba('vendas')">💰 Vendas</div>
+    <div class="pn-tab" data-tab="financeiro" onclick="trocarAba('financeiro')">🏦 Financeiro</div>
     <div class="pn-tab" data-tab="site" onclick="trocarAba('site')">🎨 Site</div>
     <div class="pn-tab" data-tab="usuarios" id="tab-usuarios" onclick="trocarAba('usuarios')" style="display:none">👤 Usuários</div>
   </div>
@@ -514,7 +516,7 @@ function abrirPainel(){
   document.getElementById('panel').classList.add('open');
   document.getElementById('pn-nome').textContent=AUTH.nome;
   document.getElementById('tab-usuarios').style.display=AUTH.role==='superadmin'?'block':'none';
-  trocarAba('produtos');
+  trocarAba('dashboard');
   checarPedidosNovos();
   if(!window._pedInterval) window._pedInterval=setInterval(checarPedidosNovos,45000);
 }
@@ -522,10 +524,12 @@ function fecharPainel(){document.getElementById('panel').classList.remove('open'
 function trocarAba(aba){
   ABA=aba;
   document.querySelectorAll('.pn-tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===aba));
+  if(aba==='dashboard')renderAbaDashboard();
   if(aba==='produtos')renderAbaProdutos();
   if(aba==='estoque')renderAbaEstoque();
   if(aba==='pedidos')renderAbaPedidos();
   if(aba==='vendas')renderAbaVendas();
+  if(aba==='financeiro')renderAbaFinanceiro();
   if(aba==='site')renderAbaSite();
   if(aba==='usuarios')renderAbaUsuarios();
 }
@@ -701,6 +705,57 @@ async function salvarVenda(){
 async function togglePago(id,pago){try{await rpc('fn_marcar_pago',{p_token:AUTH.token,p_id:id,p_pago:pago===true||pago==='true'});renderAbaVendas();}catch{toast('Erro');}}
 async function excluirVenda(id){if(!confirm('Excluir esta venda?'))return;try{await rpc('fn_excluir_venda',{p_token:AUTH.token,p_id:id});toast('Venda excluída');renderAbaVendas();}catch{toast('Erro');}}
 
+// ── ABA DASHBOARD ──
+let DASH_PERIODO='mes';
+function periodoDatas(p){
+  const hoje=new Date(), fmtD=d=>d.toISOString().slice(0,10);
+  if(p==='hoje') return [fmtD(hoje),fmtD(hoje)];
+  if(p==='7dias'){const i=new Date(hoje);i.setDate(i.getDate()-6);return [fmtD(i),fmtD(hoje)];}
+  if(p==='mes'){const i=new Date(hoje.getFullYear(),hoje.getMonth(),1);return [fmtD(i),fmtD(hoje)];}
+  if(p==='mesant'){const i=new Date(hoje.getFullYear(),hoje.getMonth()-1,1);const f=new Date(hoje.getFullYear(),hoje.getMonth(),0);return [fmtD(i),fmtD(f)];}
+  return [fmtD(hoje),fmtD(hoje)];
+}
+async function renderAbaDashboard(){
+  const b=document.getElementById('pn-body');
+  const [ini,fim]=periodoDatas(DASH_PERIODO);
+  const btns=[['hoje','Hoje'],['7dias','7 dias'],['mes','Este mês'],['mesant','Mês anterior']];
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:14px">Painel gerencial</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px">
+    ${btns.map(([k,l])=>`<button onclick="DASH_PERIODO='${k}';renderAbaDashboard()" style="padding:9px 16px;border-radius:100px;font-size:12px;font-weight:500;border:1px solid ${DASH_PERIODO===k?'var(--gold)':'rgba(255,255,255,.12)'};background:${DASH_PERIODO===k?'var(--gold)':'transparent'};color:${DASH_PERIODO===k?'#0A0D12':'var(--brown-m)'}">${l}</button>`).join('')}
+    </div>
+    <div id="dash-cards"><div class="pn-empty"><div class="spin"></div></div></div>
+    <div id="dash-rank"></div>`;
+  let d={}, rank=[];
+  try{
+    d=await rpc('fn_dashboard',{p_token:AUTH.token,p_ini:ini,p_fim:fim})||{};
+    rank=await rpc('fn_ranking_produtos',{p_token:AUTH.token,p_ini:ini,p_fim:fim})||[];
+  }catch(e){if((e.msg||'').includes('nao_autenticado'))return;}
+  const card=(lbl,val,cor)=>`<div class="stat-c" style="padding:18px"><div class="stat-v" style="color:${cor||'#fff'};font-size:22px">${val}</div><div class="stat-l">${lbl}</div></div>`;
+  document.getElementById('dash-cards').innerHTML=`
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:10px">
+      ${card('Faturamento',fmt(d.faturamento),'#5FD3C2')}
+      ${card('Lucro',fmt(d.lucro),'#9FE8DC')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px">
+      ${card('Custo',fmt(d.custo))}
+      ${card('Margem',(d.margem||0)+'%')}
+      ${card('Ticket médio',fmt(d.ticket))}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:8px">
+      ${card('Vendas',d.qtd_vendas||0)}
+      ${card('Recebido',fmt(d.pagos),'#8FE88F')}
+      ${card('A receber',fmt(d.pendentes),'#F0C98A')}
+    </div>`;
+  if(rank.length){
+    document.getElementById('dash-rank').innerHTML=
+      `<div style="font-family:var(--fd);font-size:16px;margin:24px 0 12px">Produtos mais lucrativos</div>`+
+      rank.slice(0,10).map((p,i)=>`<div class="pn-card"><div class="pn-row">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${i+1}. ${esc(p.nome)}</div>
+        <div style="font-size:12px;color:var(--brown-l)">${p.qtd} vendidos · ${fmt(p.faturamento)}</div></div>
+        <div style="font-family:var(--fd);color:#5FD3C2;font-size:16px">${fmt(p.lucro)}</div></div></div>`).join('');
+  }
+}
+
 // ── ABA ESTOQUE ──
 async function renderAbaEstoque(){
   const b=document.getElementById('pn-body');
@@ -777,6 +832,74 @@ async function recusarPedido(id){
 async function checarPedidosNovos(){
   if(!AUTH||!AUTH.token)return;
   try{const p=await rpc('fn_listar_pedidos',{p_token:AUTH.token});atualizarBadgePedidos((p||[]).length);}catch{}
+}
+
+// ── ABA FINANCEIRO ──
+let FIN_TIPO='pagar';
+async function renderAbaFinanceiro(){
+  const b=document.getElementById('pn-body');
+  let resumo={}, lista=[];
+  try{
+    resumo=await rpc('fn_resumo_financeiro',{p_token:AUTH.token})||{};
+    lista=await rpc('fn_listar_financeiro',{p_token:AUTH.token,p_tipo:FIN_TIPO})||[];
+  }catch(e){if((e.msg||'').includes('nao_autenticado'))return;}
+  const card=(lbl,val,cor)=>`<div class="stat-c"><div class="stat-v" style="color:${cor};font-size:18px">${val}</div><div class="stat-l">${lbl}</div></div>`;
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:14px">Financeiro</div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:8px">
+      ${card('A pagar',fmt(resumo.a_pagar),'#F0958A')}
+      ${card('A receber',fmt(resumo.a_receber),'#5FD3C2')}
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:20px">
+      ${card('Pago no mês',fmt(resumo.pago_mes),'var(--brown-m)')}
+      ${card('Recebido no mês',fmt(resumo.recebido_mes),'#8FE88F')}
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="FIN_TIPO='pagar';renderAbaFinanceiro()" style="flex:1;padding:11px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid ${FIN_TIPO==='pagar'?'#F0958A':'rgba(255,255,255,.12)'};background:${FIN_TIPO==='pagar'?'rgba(240,150,138,.15)':'transparent'};color:${FIN_TIPO==='pagar'?'#F0958A':'var(--brown-m)'}">Contas a pagar</button>
+      <button onclick="FIN_TIPO='receber';renderAbaFinanceiro()" style="flex:1;padding:11px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid ${FIN_TIPO==='receber'?'#5FD3C2':'rgba(255,255,255,.12)'};background:${FIN_TIPO==='receber'?'rgba(95,211,194,.15)':'transparent'};color:${FIN_TIPO==='receber'?'#5FD3C2':'var(--brown-m)'}">Contas a receber</button>
+    </div>
+    <button class="pn-add" onclick="formFinanceiro()">+ Novo lançamento</button>
+    <div id="fin-lista">${lista.length?lista.map(f=>{
+      const venc=f.vencimento?String(f.vencimento).slice(0,10).split('-').reverse().join('/'):'sem data';
+      const atrasado=f.vencimento && !f.pago && new Date(f.vencimento)<new Date(new Date().toDateString());
+      return `<div class="pn-card"><div class="pn-row">
+        <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500${f.pago?';text-decoration:line-through;opacity:.5':''}">${esc(f.descricao)}</div>
+        <div style="font-size:12px;color:${atrasado?'#F0958A':'var(--brown-l)'}">${esc(f.categoria)} · venc ${venc}${atrasado?' ⚠️ atrasado':''}</div></div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <div style="font-family:var(--fd);font-size:15px;color:${FIN_TIPO==='pagar'?'#F0958A':'#5FD3C2'}">${fmt(f.valor)}</div>
+          <button onclick="baixarFin('${f.id}',${f.pago?'false':'true'})" style="cursor:pointer;font-size:11px;padding:5px 10px;border-radius:100px;background:${f.pago?'rgba(143,232,143,.15)':'rgba(255,255,255,.06)'};color:${f.pago?'#8FE88F':'var(--brown-m)'};border:1px solid ${f.pago?'rgba(143,232,143,.3)':'var(--hair)'};font-weight:600">${f.pago?(FIN_TIPO==='pagar'?'PAGO':'RECEBIDO'):'baixar'}</button>
+          <span onclick="excluirFin('${f.id}')" style="cursor:pointer;font-size:14px">🗑️</span>
+        </div></div></div>`;
+    }).join(''):'<div class="pn-empty">Nenhuma conta '+(FIN_TIPO==='pagar'?'a pagar':'a receber')+'</div>'}</div>`;
+}
+function formFinanceiro(){
+  const b=document.getElementById('pn-body');
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:14px">Novo lançamento — ${FIN_TIPO==='pagar'?'a pagar':'a receber'}</div>
+    <span class="pn-lbl">Descrição</span><input class="pn-in" id="ff-desc">
+    <span class="pn-lbl">Valor (R$)</span><input class="pn-in" id="ff-valor" type="number" step="0.01">
+    <span class="pn-lbl">Categoria</span>
+    <select class="pn-in" id="ff-cat">${(FIN_TIPO==='pagar'?['Insumos','Embalagens','Operacional','Marketing','Impostos','Outros']:['Venda','Serviço','Outros']).map(c=>`<option>${c}</option>`).join('')}</select>
+    <span class="pn-lbl">Vencimento</span><input class="pn-in" id="ff-venc" type="date">
+    <button class="pn-save" onclick="salvarFin()">💾 Salvar</button>
+    <button class="pn-del" style="background:transparent;border:1px solid var(--hair);color:var(--brown-m)" onclick="renderAbaFinanceiro()">← Voltar</button>`;
+}
+async function salvarFin(){
+  const d={tipo:FIN_TIPO,
+    descricao:document.getElementById('ff-desc').value.trim(),
+    valor:parseFloat(document.getElementById('ff-valor').value)||0,
+    categoria:document.getElementById('ff-cat').value,
+    vencimento:document.getElementById('ff-venc').value||null};
+  if(!d.descricao||!d.valor){toast('Preencha descrição e valor');return;}
+  try{await rpc('fn_salvar_financeiro',{p_token:AUTH.token,p:d});toast('✅ Lançamento salvo');renderAbaFinanceiro();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro ao salvar');}
+}
+async function baixarFin(id,pago){
+  try{await rpc('fn_baixar_financeiro',{p_token:AUTH.token,p_id:id,p_pago:pago===true||pago==='true'});renderAbaFinanceiro();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+async function excluirFin(id){
+  if(!confirm('Excluir este lançamento?'))return;
+  try{await rpc('fn_excluir_financeiro',{p_token:AUTH.token,p_id:id});toast('Excluído');renderAbaFinanceiro();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
 }
 
 // ── ABA SITE ──
