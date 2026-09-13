@@ -338,6 +338,7 @@ textarea.pn-in{resize:vertical;min-height:72px}
   <div class="pn-tabs" id="pn-tabs">
     <div class="pn-tab on" data-tab="dashboard" onclick="trocarAba('dashboard')">📈 Painel</div>
     <div class="pn-tab" data-tab="produtos" onclick="trocarAba('produtos')">📦 Produtos</div>
+    <div class="pn-tab" data-tab="receitas" onclick="trocarAba('receitas')">🧪 Receitas</div>
     <div class="pn-tab" data-tab="estoque" onclick="trocarAba('estoque')">📊 Estoque</div>
     <div class="pn-tab" data-tab="pedidos" onclick="trocarAba('pedidos')">🛎️ Pedidos <span id="ped-badge" style="display:none;background:#F0958A;color:#0A0D12;border-radius:100px;padding:1px 7px;font-size:10px;margin-left:4px"></span></div>
     <div class="pn-tab" data-tab="vendas" onclick="trocarAba('vendas')">💰 Vendas</div>
@@ -526,6 +527,7 @@ function trocarAba(aba){
   document.querySelectorAll('.pn-tab').forEach(t=>t.classList.toggle('on',t.dataset.tab===aba));
   if(aba==='dashboard')renderAbaDashboard();
   if(aba==='produtos')renderAbaProdutos();
+  if(aba==='receitas')renderAbaReceitas();
   if(aba==='estoque')renderAbaEstoque();
   if(aba==='pedidos')renderAbaPedidos();
   if(aba==='vendas')renderAbaVendas();
@@ -754,6 +756,122 @@ async function renderAbaDashboard(){
         <div style="font-size:12px;color:var(--brown-l)">${p.qtd} vendidos · ${fmt(p.faturamento)}</div></div>
         <div style="font-family:var(--fd);color:#5FD3C2;font-size:16px">${fmt(p.lucro)}</div></div></div>`).join('');
   }
+}
+
+// ── ABA RECEITAS E CUSTOS ──
+let REC_VIEW='materias', REC_PROD=null, MATERIAS=[];
+async function renderAbaReceitas(){
+  const b=document.getElementById('pn-body');
+  b.innerHTML=`<div style="display:flex;gap:8px;margin-bottom:18px">
+    <button onclick="REC_VIEW='materias';renderAbaReceitas()" style="flex:1;padding:11px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid ${REC_VIEW==='materias'?'var(--gold)':'rgba(255,255,255,.12)'};background:${REC_VIEW==='materias'?'var(--gold)':'transparent'};color:${REC_VIEW==='materias'?'#0A0D12':'var(--brown-m)'}">Matérias-primas</button>
+    <button onclick="REC_VIEW='receitas';renderAbaReceitas()" style="flex:1;padding:11px;border-radius:100px;font-size:12px;font-weight:600;border:1px solid ${REC_VIEW==='receitas'?'var(--gold)':'rgba(255,255,255,.12)'};background:${REC_VIEW==='receitas'?'var(--gold)':'transparent'};color:${REC_VIEW==='receitas'?'#0A0D12':'var(--brown-m)'}">Receitas dos produtos</button>
+  </div><div id="rec-body"></div>`;
+  if(REC_VIEW==='materias') renderMaterias();
+  else renderReceitasProdutos();
+}
+
+// --- Matérias-primas ---
+async function renderMaterias(){
+  const el=document.getElementById('rec-body');
+  el.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
+  try{MATERIAS=await rpc('fn_listar_materias',{p_token:AUTH.token})||[];}catch(e){if((e.msg||'').includes('nao_autenticado'))return;}
+  el.innerHTML='<button class="pn-add" onclick="formMateria()">+ Nova matéria-prima</button>'+
+    (MATERIAS.length?MATERIAS.map(m=>`<div class="pn-card"><div class="pn-row">
+      <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500">${esc(m.nome)}</div>
+      <div style="font-size:12px;color:var(--brown-l)">${fmt(m.preco_pacote)} / ${m.qtd_pacote} ${m.unidade} · custo ${fmt(m.custo_unit)}/${m.unidade}</div></div>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button onclick="formMateria('${m.id}')" style="font-size:15px">✏️</button>
+        <span onclick="excluirMateria('${m.id}')" style="cursor:pointer;font-size:14px">🗑️</span>
+      </div></div></div>`).join(''):'<div class="pn-empty">Cadastre suas matérias-primas (essências, bases, frascos...)</div>');
+}
+function formMateria(id){
+  const m=id?MATERIAS.find(x=>x.id===id):{};
+  const el=document.getElementById('rec-body');
+  el.innerHTML=`<div style="font-family:var(--fd);font-size:18px;margin-bottom:12px">${id?'Editar':'Nova'} matéria-prima</div>
+    <span class="pn-lbl">Nome (ex: Essência La Vie, Frasco 200ml)</span><input class="pn-in" id="fm-nome" value="${esc(m.nome||'')}">
+    <div style="display:flex;gap:10px">
+      <div style="flex:2"><span class="pn-lbl">Preço que você pagou (R$)</span><input class="pn-in" id="fm-preco" type="number" step="0.01" value="${m.preco_pacote||''}"></div>
+      <div style="flex:2"><span class="pn-lbl">Quantidade que veio</span><input class="pn-in" id="fm-qtd" type="number" step="0.001" value="${m.qtd_pacote||''}"></div>
+      <div style="flex:1"><span class="pn-lbl">Unid.</span>
+        <select class="pn-in" id="fm-un">${['g','ml','kg','l','un'].map(u=>`<option ${m.unidade===u?'selected':''}>${u}</option>`).join('')}</select></div>
+    </div>
+    <div style="font-size:12px;color:var(--brown-l);margin-bottom:8px">Ex: paguei R$ 80 num litro de essência → preço 80, quantidade 1000, unidade ml</div>
+    <button class="pn-save" onclick="salvarMateria('${id||''}')">💾 Salvar</button>
+    <button class="pn-del" style="background:transparent;border:1px solid var(--hair);color:var(--brown-m)" onclick="renderMaterias()">← Voltar</button>`;
+}
+async function salvarMateria(id){
+  const d={nome:document.getElementById('fm-nome').value.trim(),
+    preco_pacote:parseFloat(document.getElementById('fm-preco').value)||0,
+    qtd_pacote:parseFloat(document.getElementById('fm-qtd').value)||1,
+    unidade:document.getElementById('fm-un').value};
+  if(!d.nome){toast('Informe o nome');return;}
+  if(id)d.id=id;
+  try{await rpc('fn_salvar_materia',{p_token:AUTH.token,p:d});toast('✅ Salvo');renderMaterias();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+async function excluirMateria(id){
+  if(!confirm('Excluir esta matéria-prima? Sai de todas as receitas.'))return;
+  try{await rpc('fn_excluir_materia',{p_token:AUTH.token,p_id:id});toast('Excluída');renderMaterias();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+
+// --- Receitas dos produtos ---
+async function renderReceitasProdutos(){
+  const el=document.getElementById('rec-body');
+  el.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
+  try{PRODUTOS=await pub('produtos?select=*&order=nome');}catch{}
+  el.innerHTML='<div style="font-size:13px;color:var(--brown-l);margin-bottom:14px">Escolha um produto para montar a receita e calcular o custo:</div>'+
+    PRODUTOS.map(p=>`<div class="pn-card" onclick="abrirReceita('${p.id}')" style="cursor:pointer"><div class="pn-row">
+      <div style="display:flex;gap:12px;align-items:center;flex:1;min-width:0">
+        <div style="width:38px;height:38px;border-radius:8px;background:#12161D;display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden;flex-shrink:0">${p.foto?`<img src="${esc(p.foto)}" style="width:100%;height:100%;object-fit:cover">`:(p.emoji||'🌿')}</div>
+        <div style="min-width:0"><div style="font-size:14px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(p.nome)}</div>
+        <div style="font-size:12px;color:var(--brown-l)">venda ${fmt(p.venda)} · custo atual ${fmt(p.custo)}</div></div>
+      </div><span style="color:var(--brown-l)">›</span></div></div>`).join('');
+}
+async function abrirReceita(prodId){
+  REC_PROD=prodId;
+  const p=PRODUTOS.find(x=>x.id===prodId);
+  const el=document.getElementById('rec-body');
+  el.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
+  let itens=[];
+  try{
+    if(!MATERIAS.length) MATERIAS=await rpc('fn_listar_materias',{p_token:AUTH.token})||[];
+    itens=await rpc('fn_receita_produto',{p_token:AUTH.token,p_produto_id:prodId})||[];
+  }catch(e){if((e.msg||'').includes('nao_autenticado'))return;}
+  const custoTotal=itens.reduce((a,i)=>a+Number(i.custo),0);
+  el.innerHTML=`<button class="pn-del" style="background:transparent;border:1px solid var(--hair);color:var(--brown-m);width:auto;padding:8px 16px;margin:0 0 14px" onclick="renderReceitasProdutos()">← Voltar</button>
+    <div style="font-family:var(--fd);font-size:18px;margin-bottom:4px">${esc(p.nome)}</div>
+    <div style="font-size:13px;color:var(--brown-l);margin-bottom:16px">Venda: ${fmt(p.venda)}</div>
+    <div style="display:flex;gap:8px;align-items:end;margin-bottom:14px">
+      <div style="flex:2"><span class="pn-lbl">Ingrediente</span>
+        <select class="pn-in" id="rec-mat" style="margin-bottom:0">${MATERIAS.map(m=>`<option value="${m.id}">${esc(m.nome)} (${fmt(m.custo_unit)}/${m.unidade})</option>`).join('')}</select></div>
+      <div style="flex:1"><span class="pn-lbl">Qtd</span><input class="pn-in" id="rec-qtd" type="number" step="0.001" value="1" style="margin-bottom:0"></div>
+      <button class="pn-add" style="margin-bottom:0" onclick="addIngrediente()">+</button>
+    </div>
+    <div id="rec-itens">${itens.length?itens.map(i=>`<div class="pn-card"><div class="pn-row">
+      <div style="flex:1"><div style="font-size:14px">${esc(i.nome)}</div><div style="font-size:12px;color:var(--brown-l)">${i.quantidade} ${i.unidade}</div></div>
+      <div style="display:flex;gap:10px;align-items:center"><div style="font-family:var(--fd);color:#5FD3C2">${fmt(i.custo)}</div>
+      <span onclick="removerIngrediente('${i.id}')" style="cursor:pointer">🗑️</span></div></div></div>`).join(''):'<div class="pn-empty">Adicione os ingredientes da receita</div>'}</div>
+    <div class="pn-card" style="border-color:var(--gold)"><div class="pn-row">
+      <div style="font-family:var(--fd);font-size:16px">Custo total da receita</div>
+      <div style="font-family:var(--fd);font-size:22px;color:#5FD3C2">${fmt(custoTotal)}</div></div></div>
+    ${itens.length?`<div style="font-size:13px;color:var(--brown-l);text-align:center;margin:10px 0">Lucro por unidade: ${fmt(p.venda-custoTotal)} · margem ${p.venda>0?Math.round((p.venda-custoTotal)/p.venda*100):0}%</div>
+    <button class="pn-save" onclick="aplicarCusto('${prodId}')">✓ Usar ${fmt(custoTotal)} como custo do produto</button>`:''}`;
+}
+async function addIngrediente(){
+  const mat=document.getElementById('rec-mat').value;
+  const qtd=parseFloat(document.getElementById('rec-qtd').value)||0;
+  if(!mat||qtd<=0){toast('Escolha ingrediente e quantidade');return;}
+  try{await rpc('fn_add_receita',{p_token:AUTH.token,p_produto_id:REC_PROD,p_materia_id:mat,p_qtd:qtd});abrirReceita(REC_PROD);}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+async function removerIngrediente(id){
+  try{await rpc('fn_remover_receita',{p_token:AUTH.token,p_id:id});abrirReceita(REC_PROD);}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
+}
+async function aplicarCusto(prodId){
+  try{const r=await rpc('fn_aplicar_custo_receita',{p_token:AUTH.token,p_produto_id:prodId});toast('✅ Custo '+fmt(r.custo)+' aplicado ao produto!');}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro');}
 }
 
 // ── ABA ESTOQUE ──
