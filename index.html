@@ -501,12 +501,18 @@ async function fazerLogin(){
   if(!u||!s){err.textContent='Preencha usuário e senha';return;}
   try{
     const d=await rpc('fn_login',{p_usuario:u,p_senha:s});
+    if(d && d.erro){
+      if(d.erro==='bloqueado') err.textContent='Conta bloqueada por tentativas. Tente após '+(d.ate||'30 min');
+      else if(d.erro==='login_invalido') err.textContent='Usuário ou senha incorretos'+(d.restam!=null?' ('+d.restam+' tentativa(s) restante(s))':'');
+      else err.textContent='Não foi possível entrar';
+      return;
+    }
     AUTH={token:d.token,nome:d.nome,usuario:d.usuario,role:d.role,id:d.id};
     localStorage.setItem('solar_auth',JSON.stringify(AUTH));
     document.getElementById('l-sen').value='';
     fecharLogin();abrirPainel();toast('☀ Bem-vindo(a), '+d.nome+'!');
   }catch(e){
-    err.textContent=(e.msg||'').includes('login_invalido')?'Usuário ou senha incorretos':'Sem conexão com o servidor';
+    err.textContent='Sem conexão com o servidor';
   }
 }
 function sairConta(){localStorage.removeItem('solar_auth');AUTH=null;fecharPainel();toast('Você saiu da conta');}
@@ -1054,15 +1060,62 @@ async function salvarSite(){
 async function renderAbaUsuarios(){
   const b=document.getElementById('pn-body');
   b.innerHTML='<div class="pn-empty"><div class="spin"></div></div>';
-  try{USUARIOS=await rpc('fn_listar_usuarios',{p_token:AUTH.token})||[];}catch{b.innerHTML='<div class="pn-empty">Erro ao carregar</div>';return;}
-  b.innerHTML='<button class="pn-add" onclick="formUsuario()">+ Novo usuário</button>'+
+  try{USUARIOS=await rpc('fn_listar_usuarios',{p_token:AUTH.token})||[];}catch(e){if((e.msg||'').includes('nao_autenticado'))return;b.innerHTML='<div class="pn-empty">Erro ao carregar</div>';return;}
+  b.innerHTML=`
+    <div class="pn-card" style="border-color:rgba(95,211,194,.3);margin-bottom:16px">
+      <div class="pn-row"><div><div style="font-size:14px;font-weight:500">🔑 Minha senha</div>
+      <div style="font-size:12px;color:var(--brown-l)">Alterar a senha da sua conta (${esc(AUTH.nome)})</div></div>
+      <button onclick="formMinhaSenha()" style="padding:9px 16px;border-radius:100px;background:var(--white);color:#0A0D12;font-size:12px;font-weight:600">Alterar</button></div>
+    </div>
+    <button class="pn-add" onclick="formUsuario()">+ Novo usuário</button>`+
     USUARIOS.map(u=>`<div class="pn-card"><div class="pn-row">
-      <div><div style="font-weight:600;font-size:14px">${esc(u.nome)}</div><div style="font-size:12px;color:var(--brown-l)">@${esc(u.usuario)}</div></div>
+      <div><div style="font-weight:500;font-size:14px">${esc(u.nome)}</div><div style="font-size:12px;color:var(--brown-l)">@${esc(u.usuario)}</div></div>
       <div style="display:flex;gap:10px;align-items:center">
         <span class="role-pill${u.role==='superadmin'?' sup':''}">${u.role==='superadmin'?'Admin':'Vend.'}</span>
-        ${u.usuario!==AUTH.usuario?`<span onclick="excluirUsuario('${u.id}','${esc(u.nome)}')" style="cursor:pointer;font-size:15px">🗑️</span>`:''}
+        <button onclick="formRedefinirSenha('${u.id}','${esc(u.nome)}')" title="Redefinir senha" style="font-size:14px">🔑</button>
+        ${u.usuario!==AUTH.usuario?`<span onclick="excluirUsuario('${u.id}','${esc(u.nome)}')" style="cursor:pointer;font-size:14px">🗑️</span>`:''}
       </div></div></div>`).join('');
 }
+
+function formMinhaSenha(){
+  const b=document.getElementById('pn-body');
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:18px;margin-bottom:12px">🔑 Alterar minha senha</div>
+    <span class="pn-lbl">Senha atual</span><input class="pn-in" id="ms-atual" type="password">
+    <span class="pn-lbl">Nova senha (mín. 6 caracteres)</span><input class="pn-in" id="ms-nova" type="password">
+    <span class="pn-lbl">Confirmar nova senha</span><input class="pn-in" id="ms-conf" type="password">
+    <button class="pn-save" onclick="salvarMinhaSenha()">💾 Alterar senha</button>
+    <button class="pn-del" style="background:transparent;border:1px solid var(--hair);color:var(--brown-m)" onclick="renderAbaUsuarios()">← Voltar</button>`;
+}
+async function salvarMinhaSenha(){
+  const atual=document.getElementById('ms-atual').value, nova=document.getElementById('ms-nova').value, conf=document.getElementById('ms-conf').value;
+  if(!atual||!nova){toast('Preencha os campos');return;}
+  if(nova.length<6){toast('Nova senha muito curta (mín. 6)');return;}
+  if(nova!==conf){toast('As senhas não coincidem');return;}
+  try{await rpc('fn_trocar_senha',{p_token:AUTH.token,p_senha_atual:atual,p_nova:nova});toast('✅ Senha alterada!');renderAbaUsuarios();}
+  catch(e){
+    if((e.msg||'').includes('senha_atual_incorreta'))toast('❌ Senha atual incorreta');
+    else if((e.msg||'').includes('senha_curta'))toast('❌ Senha muito curta');
+    else if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro ao alterar');
+  }
+}
+
+function formRedefinirSenha(id,nome){
+  if(AUTH.role!=='superadmin'){toast('Apenas o Super Admin redefine senha de outros');return;}
+  const b=document.getElementById('pn-body');
+  b.innerHTML=`<div style="font-family:var(--fd);font-size:18px;margin-bottom:6px">🔑 Redefinir senha</div>
+    <div style="font-size:13px;color:var(--brown-l);margin-bottom:14px">Definir nova senha para <b>${esc(nome)}</b></div>
+    <span class="pn-lbl">Nova senha (mín. 6)</span><input class="pn-in" id="rs-nova" type="password">
+    <button class="pn-save" onclick="salvarRedefinir('${id}')">💾 Redefinir</button>
+    <button class="pn-del" style="background:transparent;border:1px solid var(--hair);color:var(--brown-m)" onclick="renderAbaUsuarios()">← Voltar</button>`;
+}
+async function salvarRedefinir(id){
+  const nova=document.getElementById('rs-nova').value;
+  if(nova.length<6){toast('Senha muito curta (mín. 6)');return;}
+  try{await rpc('fn_redefinir_senha',{p_token:AUTH.token,p_id:id,p_nova:nova});toast('✅ Senha redefinida!');renderAbaUsuarios();}
+  catch(e){if(!(e.msg||'').includes('nao_autenticado'))toast('❌ Erro ao redefinir');}
+}
+
+
 function formUsuario(){
   const b=document.getElementById('pn-body');
   b.innerHTML=`<div style="font-family:var(--fd);font-size:20px;margin-bottom:14px">Novo usuário</div>
